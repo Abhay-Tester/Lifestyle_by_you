@@ -19,7 +19,6 @@ export const defaultUserProfile: UserProfile = {
   phone: '7385302325',
   whatsappNumber: '7385302325',
   email: 'abhaytoriya23@gmail.com',
-  password: 'Abhay@123',
   bio: 'Building consistent daily habits, focused studying, healthy digestion, and achieving high-priority life goals.',
   city: 'Maharashtra, India',
 };

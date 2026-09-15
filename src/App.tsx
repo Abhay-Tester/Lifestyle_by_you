@@ -32,6 +32,8 @@ import {
   saveAllUserDataToCloud, 
   deleteCloudItem 
 } from './lib/firestoreService';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { auth } from './lib/firebase';
 
 import { Header } from './components/Header';
 import { Navigation } from './components/Navigation';
@@ -45,7 +47,7 @@ import { AnalyticsOverview } from './components/AnalyticsOverview';
 import { HabitMatrixSheet } from './components/HabitMatrixSheet';
 import { QuickAddModal } from './components/QuickAddModal';
 import { ProfileSection } from './components/ProfileSection';
-import { LoginModal } from './components/LoginModal';
+import { LoginPage } from './components/LoginPage';
 
 export default function App() {
   const today = getTodayDateString();
@@ -56,15 +58,48 @@ export default function App() {
   const isInitialCloudLoadDone = useRef(false);
 
   // Authentication State
+  // Initial check: if already stored in session or user is on /home
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    return loadStoredData<boolean>(STORAGE_KEYS.AUTH_SESSION, true);
+    // Check path or stored session
+    if (typeof window !== 'undefined') {
+      const isHomePath = window.location.pathname.startsWith('/home') || window.location.hash.includes('home');
+      const savedAuth = loadStoredData<boolean>(STORAGE_KEYS.AUTH_SESSION, false);
+      return isHomePath || savedAuth;
+    }
+    return false;
   });
-  const [isLoginModalOpen, setIsLoginModalOpen] = useState<boolean>(!isAuthenticated);
 
   // User Profile State
   const [userProfile, setUserProfile] = useState<UserProfile>(() => 
     loadStoredData(STORAGE_KEYS.USER_PROFILE, defaultUserProfile)
   );
+
+  // Listen to Firebase Auth state
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        setIsAuthenticated(true);
+        saveStoredData(STORAGE_KEYS.AUTH_SESSION, true);
+        if (user.email && user.email !== userProfile.email) {
+          setUserProfile((prev) => ({
+            ...prev,
+            email: user.email || prev.email,
+            name: user.displayName || prev.name,
+          }));
+        }
+        // Update URL path to /home if not already there
+        if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/home')) {
+          try {
+            window.history.pushState(null, '', '/home');
+          } catch {
+            // fallback
+          }
+        }
+      }
+    });
+
+    return () => unsubscribe();
+  }, [userProfile.email]);
 
   // Main Persistent States
   const [tasks, setTasks] = useState<Task[]>(() => loadStoredData(STORAGE_KEYS.TASKS, defaultTasks));
@@ -187,14 +222,34 @@ export default function App() {
     }));
   };
 
-  const handleSuccessLogin = () => {
+  const handleSuccessLogin = (email?: string) => {
     setIsAuthenticated(true);
-    setIsLoginModalOpen(false);
+    saveStoredData(STORAGE_KEYS.AUTH_SESSION, true);
+    if (email) {
+      setUserProfile((prev) => ({ ...prev, email }));
+    }
+    // Update route to /home
+    try {
+      window.history.pushState(null, '', '/home');
+    } catch {
+      // ignore
+    }
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+    } catch {
+      // non-fatal
+    }
     setIsAuthenticated(false);
-    setIsLoginModalOpen(true);
+    saveStoredData(STORAGE_KEYS.AUTH_SESSION, false);
+    // Return route to /
+    try {
+      window.history.pushState(null, '', '/');
+    } catch {
+      // ignore
+    }
   };
 
   // Ensure selectedDate has a valid DailyLog object
@@ -486,6 +541,16 @@ export default function App() {
     setUserProfile(loadStoredData(STORAGE_KEYS.USER_PROFILE, defaultUserProfile));
   };
 
+  // If user is not authenticated, show ONLY the Landing Login Page
+  if (!isAuthenticated) {
+    return (
+      <LoginPage
+        onSuccessLogin={handleSuccessLogin}
+        userProfile={userProfile}
+      />
+    );
+  }
+
   // Quick stats for Header
   const pendingTasksCount = tasks.filter((t) => !t.completedDates[selectedDate]).length;
   const completedTasksCount = tasks.filter((t) => !!t.completedDates[selectedDate]).length;
@@ -495,6 +560,7 @@ export default function App() {
     .filter((s) => s.date === selectedDate && s.completed)
     .reduce((acc, curr) => acc + curr.durationMinutes, 0);
 
+  // Authenticated App Shell (at /home)
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans antialiased selection:bg-indigo-500 selection:text-white">
       
@@ -641,13 +707,6 @@ export default function App() {
           onAddPurchase={handleAddPurchase}
         />
       )}
-
-      {/* Security & Login Dialog */}
-      <LoginModal
-        isOpen={isLoginModalOpen}
-        onSuccessLogin={handleSuccessLogin}
-        userProfile={userProfile}
-      />
     </div>
   );
 }
