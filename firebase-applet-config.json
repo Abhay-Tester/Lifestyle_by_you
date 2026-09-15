@@ -1,12 +1,12 @@
 {
-  "projectId": "ancient-destiny-qwjkk",
-  "appId": "1:1068306357928:web:e999f6e80661264d53ec9d",
-  "apiKey": "AIzaSyAfe8B1kartS-nejYc7dmk09NTCU0z32V4",
-  "authDomain": "ancient-destiny-qwjkk.firebaseapp.com",
-  "firestoreDatabaseId": "ai-studio-lifeospersonalsy-87980744-e7e4-4574-aa09-0d75d5702522",
-  "storageBucket": "ancient-destiny-qwjkk.firebasestorage.app",
-  "messagingSenderId": "1068306357928",
-  "measurementId": "",
-  "oAuthClientId": "1068306357928-kk4q8til03esal390ioj03a91l9ofq23.apps.googleusercontent.com",
+  "projectId": "lifestylebyyou",
+  "appId": "1:358991743273:web:763ca46214fe0af421cf38",
+  "apiKey": "AIzaSyAqV0zvxfomFsvhRPbssNtRd0pvY4FKwwE",
+  "authDomain": "lifestylebyyou.firebaseapp.com",
+  "firestoreDatabaseId": "(default)",
+  "storageBucket": "lifestylebyyou.firebasestorage.app",
+  "messagingSenderId": "358991743273",
+  "measurementId": "G-C5ETK8KJ4C",
+  "oAuthClientId": "",
   "recaptchaSiteKey": ""
 }
