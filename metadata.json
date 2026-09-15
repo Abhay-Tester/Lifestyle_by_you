@@ -1,0 +1,6 @@
+{
+  "name": "Life style",
+  "description": "Personal management system for routines, wake/sleep tracking, study, exercise, food & digestion health, long-term goals, and future purchases.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

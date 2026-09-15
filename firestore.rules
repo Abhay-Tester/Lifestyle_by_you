@@ -1,0 +1,15 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Allow users to read and write their user document and subcollections
+    // Uses client-generated or auth userId
+    match /users/{userId} {
+      allow read, write: if true;
+
+      match /{subcollection}/{docId} {
+        allow read, write: if true;
+      }
+    }
+  }
+}

@@ -1,0 +1,196 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile with preference and synchronization status",
+      "type": "object",
+      "properties": {
+        "displayName": { "type": "string" },
+        "email": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "lastSyncedAt": { "type": "string" }
+      },
+      "required": ["email"]
+    },
+    "Task": {
+      "title": "Task",
+      "description": "User lifestyle and habit task with daily completion tracking",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "category": { "type": "string" },
+        "priority": { "type": "string" },
+        "scheduledTime": { "type": "string" },
+        "completedDates": { "type": "object" },
+        "recurring": { "type": "string" },
+        "notes": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["userId", "title"]
+    },
+    "DailyLog": {
+      "title": "DailyLog",
+      "description": "Daily wake, sleep, mood, and hydration logs",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "date": { "type": "string" },
+        "targetWakeTime": { "type": "string" },
+        "actualWakeTime": { "type": "string" },
+        "targetSleepTime": { "type": "string" },
+        "actualSleepTime": { "type": "string" },
+        "sleptEarly": { "type": "boolean" },
+        "sleepQuality": { "type": "number" },
+        "mood": { "type": "number" },
+        "energyLevel": { "type": "number" },
+        "waterIntakeMl": { "type": "number" },
+        "waterGoalMl": { "type": "number" },
+        "digestionStatus": { "type": "string" },
+        "gutComfortRating": { "type": "number" },
+        "digestionNotes": { "type": "string" },
+        "notes": { "type": "string" }
+      },
+      "required": ["userId", "date"]
+    },
+    "StudySession": {
+      "title": "StudySession",
+      "description": "Recorded study blocks and pomodoro timers",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "subject": { "type": "string" },
+        "topic": { "type": "string" },
+        "durationMinutes": { "type": "number" },
+        "date": { "type": "string" },
+        "startTime": { "type": "string" },
+        "completed": { "type": "boolean" },
+        "keyTakeaways": { "type": "string" }
+      },
+      "required": ["userId", "subject", "durationMinutes", "date"]
+    },
+    "ExerciseLog": {
+      "title": "ExerciseLog",
+      "description": "Workout sessions and physical training records",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "type": { "type": "string" },
+        "title": { "type": "string" },
+        "durationMinutes": { "type": "number" },
+        "caloriesBurned": { "type": "number" },
+        "date": { "type": "string" },
+        "time": { "type": "string" },
+        "completed": { "type": "boolean" },
+        "notes": { "type": "string" }
+      },
+      "required": ["userId", "title", "date"]
+    },
+    "MealLog": {
+      "title": "MealLog",
+      "description": "Daily food, nutrition, and digestion ratings",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "mealType": { "type": "string" },
+        "foodItems": { "type": "array", "items": { "type": "string" } },
+        "time": { "type": "string" },
+        "date": { "type": "string" },
+        "healthScore": { "type": "number" },
+        "gutFriendliness": { "type": "string" },
+        "notes": { "type": "string" }
+      },
+      "required": ["userId", "mealType", "date"]
+    },
+    "Goal": {
+      "title": "Goal",
+      "description": "Long and short-term life goals with milestone progress",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "category": { "type": "string" },
+        "targetDate": { "type": "string" },
+        "progress": { "type": "number" },
+        "milestones": { "type": "array" },
+        "status": { "type": "string" },
+        "why": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["userId", "title"]
+    },
+    "PurchaseItem": {
+      "title": "PurchaseItem",
+      "description": "Budget planner and purchase decision records",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "name": { "type": "string" },
+        "price": { "type": "number" },
+        "category": { "type": "string" },
+        "priority": { "type": "string" },
+        "status": { "type": "string" },
+        "needVsWant": { "type": "string" },
+        "justification": { "type": "string" },
+        "targetDate": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["userId", "name", "price"]
+    },
+    "HabitChallenge": {
+      "title": "HabitChallenge",
+      "description": "Progressive 3-6-11 day neuro-habit ladder challenges",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "category": { "type": "string" },
+        "targetDays": { "type": "number" },
+        "completedDates": { "type": "array", "items": { "type": "string" } },
+        "currentStage": { "type": "string" },
+        "startDate": { "type": "string" },
+        "notes": { "type": "string" },
+        "brainComfortTip": { "type": "string" }
+      },
+      "required": ["userId", "title", "targetDays"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User profile document"
+    },
+    "/users/{userId}/tasks/{taskId}": {
+      "schema": "Task",
+      "description": "User habit and lifestyle tasks"
+    },
+    "/users/{userId}/dailyLogs/{dateId}": {
+      "schema": "DailyLog",
+      "description": "Daily wellness, sleep, wake, and hydration logs"
+    },
+    "/users/{userId}/studySessions/{sessionId}": {
+      "schema": "StudySession",
+      "description": "Study logs"
+    },
+    "/users/{userId}/exerciseLogs/{exerciseId}": {
+      "schema": "ExerciseLog",
+      "description": "Exercise logs"
+    },
+    "/users/{userId}/mealLogs/{mealId}": {
+      "schema": "MealLog",
+      "description": "Meal logs"
+    },
+    "/users/{userId}/goals/{goalId}": {
+      "schema": "Goal",
+      "description": "User goals and milestones"
+    },
+    "/users/{userId}/purchases/{purchaseId}": {
+      "schema": "PurchaseItem",
+      "description": "Purchase planning items"
+    },
+    "/users/{userId}/habitChallenges/{challengeId}": {
+      "schema": "HabitChallenge",
+      "description": "Habit ladder challenges"
+    }
+  }
+}
