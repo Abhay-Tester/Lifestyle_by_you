@@ -55,12 +55,21 @@ import { LoginPage } from './components/LoginPage';
 import { EmergencyNotesSection } from './components/EmergencyNotesSection';
 import { EmergencyQuickModal } from './components/EmergencyQuickModal';
 
+import { NotificationModal } from './components/NotificationModal';
+import { InAppNotificationBanner } from './components/InAppNotificationBanner';
+import { 
+  NotificationSettings, 
+  defaultNotificationSettings, 
+  evaluateScheduledReminders 
+} from './utils/notifications';
+
 export default function App() {
   const today = getTodayDateString();
   const [selectedDate, setSelectedDate] = useState<string>(today);
   const [activeTab, setActiveTab] = useState<ActiveTab>('habit_matrix');
   const [isQuickAddOpen, setIsQuickAddOpen] = useState<boolean>(false);
   const [isEmergencyModalOpen, setIsEmergencyModalOpen] = useState<boolean>(false);
+  const [isNotificationModalOpen, setIsNotificationModalOpen] = useState<boolean>(false);
   const [cloudSyncStatus, setCloudSyncStatus] = useState<'synced' | 'syncing' | 'offline'>('synced');
   const [isInitialLoading, setIsInitialLoading] = useState<boolean>(true);
   const isInitialCloudLoadDone = useRef(false);
@@ -74,6 +83,11 @@ export default function App() {
   });
 
   const currentUserId = currentFirebaseUser?.uid;
+
+  // Notification Settings State
+  const [notificationSettings, setNotificationSettings] = useState<NotificationSettings>(() =>
+    loadStoredData(STORAGE_KEYS.NOTIFICATION_SETTINGS, defaultNotificationSettings, currentUserId)
+  );
 
   // Primary User Isolated Lifestyle State
   const [userProfile, setUserProfile] = useState<UserProfile>(() => 
@@ -262,6 +276,23 @@ export default function App() {
   useEffect(() => { 
     if (currentUserId) saveStoredData(STORAGE_KEYS.EMERGENCY_NOTES, emergencyNotes, currentUserId); 
   }, [emergencyNotes, currentUserId]);
+
+  useEffect(() => { 
+    if (currentUserId) saveStoredData(STORAGE_KEYS.NOTIFICATION_SETTINGS, notificationSettings, currentUserId); 
+  }, [notificationSettings, currentUserId]);
+
+  // Background ticker for scheduled task alerts, wake up time, and sleep time notifications
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const logToday = dailyLogs[selectedDate] || dailyLogs[today];
+      evaluateScheduledReminders(tasks, logToday, notificationSettings);
+    }, 20000);
+
+    const logToday = dailyLogs[selectedDate] || dailyLogs[today];
+    evaluateScheduledReminders(tasks, logToday, notificationSettings);
+
+    return () => clearInterval(interval);
+  }, [tasks, dailyLogs, selectedDate, today, notificationSettings]);
 
   // Debounced auto-sync to Firestore for the currently active user
   useEffect(() => {
@@ -716,6 +747,7 @@ export default function App() {
         onManualCloudSync={handleManualCloudSync}
         userProfile={userProfile}
         onOpenProfile={() => setActiveTab('profile')}
+        onOpenNotifications={() => setIsNotificationModalOpen(true)}
         onLogout={handleLogout}
         userId={currentUserId}
       />
@@ -865,6 +897,17 @@ export default function App() {
         onClose={() => setIsEmergencyModalOpen(false)}
         onAddNote={handleAddEmergencyNote}
       />
+
+      {/* Notification Center Modal */}
+      <NotificationModal
+        isOpen={isNotificationModalOpen}
+        onClose={() => setIsNotificationModalOpen(false)}
+        settings={notificationSettings}
+        onUpdateSettings={setNotificationSettings}
+      />
+
+      {/* Floating In-App Toast Notification Banner */}
+      <InAppNotificationBanner />
 
       {/* Quick Add Modal */}
       <QuickAddModal

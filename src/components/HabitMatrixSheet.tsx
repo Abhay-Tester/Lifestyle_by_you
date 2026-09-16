@@ -19,8 +19,10 @@ import {
   GripVertical,
   ChevronUp,
   ChevronDown,
-  AlertTriangle
+  AlertTriangle,
+  Bell
 } from 'lucide-react';
+import { formatTime12Hour } from '../utils/notifications';
 
 interface HabitMatrixSheetProps {
   tasks: Task[];
@@ -80,6 +82,7 @@ export const HabitMatrixSheet: React.FC<HabitMatrixSheetProps> = ({
   const [newTitle, setNewTitle] = useState('');
   const [newCategory, setNewCategory] = useState<TaskCategory>('study');
   const [newPriority, setNewPriority] = useState<'low' | 'medium' | 'high'>('medium');
+  const [newScheduledTime, setNewScheduledTime] = useState('');
 
   // Edit Task State
   const [editingTask, setEditingTask] = useState<Task | null>(null);
@@ -349,9 +352,13 @@ export const HabitMatrixSheet: React.FC<HabitMatrixSheetProps> = ({
       title: newTitle,
       category: newCategory,
       priority: newPriority,
+      scheduledTime: newScheduledTime || undefined,
+      reminderEnabled: !!newScheduledTime,
+      reminderTime: newScheduledTime || undefined,
       recurring: 'daily',
     });
     setNewTitle('');
+    setNewScheduledTime('');
     setShowAddModal(false);
   };
 
@@ -699,6 +706,16 @@ export const HabitMatrixSheet: React.FC<HabitMatrixSheetProps> = ({
                               <span className="truncate text-slate-900 font-semibold text-xs leading-tight" title={task.title}>
                                 {task.title}
                               </span>
+
+                              {(task.scheduledTime || task.reminderTime) && (
+                                <span 
+                                  className="inline-flex items-center gap-0.5 text-[9px] font-bold text-amber-700 bg-amber-50 border border-amber-200/80 px-1 py-0.2 rounded shrink-0"
+                                  title={`Notification scheduled for ${formatTime12Hour(task.scheduledTime || task.reminderTime || '')}`}
+                                >
+                                  <Bell className="w-2.5 h-2.5 text-amber-500 fill-amber-400" />
+                                  <span>{formatTime12Hour(task.scheduledTime || task.reminderTime || '')}</span>
+                                </span>
+                              )}
                             </div>
 
                             {/* Quick Actions: Edit & Delete */}
@@ -872,6 +889,23 @@ export const HabitMatrixSheet: React.FC<HabitMatrixSheetProps> = ({
                     <option value="low">🟢 Low</option>
                   </select>
                 </div>
+              </div>
+
+              {/* Optional Phone/App Notification Reminder Time */}
+              <div>
+                <label className="text-xs font-semibold text-slate-700 block mb-1 flex items-center gap-1.5">
+                  <Bell className="w-3.5 h-3.5 text-amber-500" />
+                  Scheduled Notification Time (Optional)
+                </label>
+                <input
+                  type="time"
+                  value={newScheduledTime}
+                  onChange={(e) => setNewScheduledTime(e.target.value)}
+                  className="w-full bg-white border border-slate-200 rounded-xl p-2.5 text-xs font-medium focus:border-indigo-500 focus:outline-none text-slate-900"
+                />
+                <p className="text-[10px] text-slate-400 mt-1">
+                  e.g., set to 18:00 (6:00 PM) for daily walk notification alert on phone.
+                </p>
               </div>
 
               <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">

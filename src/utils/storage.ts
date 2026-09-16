@@ -13,6 +13,7 @@ const STORAGE_KEYS = {
   USER_PROFILE: 'lifeos_user_profile_v1',
   AUTH_SESSION: 'lifeos_auth_session_v1',
   EMERGENCY_NOTES: 'lifeos_emergency_notes_v1',
+  NOTIFICATION_SETTINGS: 'lifeos_notification_settings_v1',
 };
 
 /**

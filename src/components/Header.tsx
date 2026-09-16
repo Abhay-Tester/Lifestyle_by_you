@@ -6,7 +6,8 @@ import {
   RotateCcw, 
   Sparkles,
   User,
-  LogOut
+  LogOut,
+  Bell
 } from 'lucide-react';
 import { getTodayDateString } from '../utils/date';
 import { exportAllUserData, importUserData } from '../utils/storage';
@@ -24,6 +25,7 @@ interface HeaderProps {
   onDataRefresh: () => void;
   userProfile?: UserProfile;
   onOpenProfile?: () => void;
+  onOpenNotifications?: () => void;
   onLogout?: () => void;
   userId?: string;
   cloudSyncStatus?: string;
@@ -45,6 +47,7 @@ export const Header: React.FC<HeaderProps> = ({
   onDataRefresh,
   userProfile,
   onOpenProfile,
+  onOpenNotifications,
   onLogout,
   userId,
 }) => {
@@ -134,6 +137,17 @@ export const Header: React.FC<HeaderProps> = ({
               <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               <span className="hidden sm:inline">New Entry</span>
               <span className="sm:hidden">Add</span>
+            </button>
+
+            {/* Notification Bell Button */}
+            <button
+              onClick={onOpenNotifications}
+              className="p-1.5 sm:p-2 bg-slate-800 hover:bg-slate-700 text-amber-300 rounded-lg border border-slate-700 transition-colors cursor-pointer relative"
+              title="Notifications & Phone Alerts"
+            >
+              <Bell className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-amber-400 rounded-full animate-ping" />
+              <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-amber-400 rounded-full" />
             </button>
 
             {/* User Profile avatar quick link */}

@@ -15,6 +15,8 @@ export interface Task {
   category: TaskCategory;
   priority: Priority;
   scheduledTime?: string; // HH:mm
+  reminderEnabled?: boolean;
+  reminderTime?: string; // HH:mm
   completedDates: Record<string, boolean>; // key: YYYY-MM-DD, value: true/false
   recurring: 'daily' | 'weekdays' | 'weekends' | 'custom';
   notes?: string;

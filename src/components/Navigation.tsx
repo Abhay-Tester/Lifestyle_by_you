@@ -37,7 +37,7 @@ export const Navigation: React.FC<NavigationProps> = ({
   const mainPages = [
     {
       id: 'habit_matrix' as ActiveTab,
-      label: 'Habit Matrix Sheet 📊',
+      label: 'Habit Matrix 📊',
       sublabel: 'Routines, Habits & Multi-Date Matrix',
       icon: BarChart3,
       badge: pendingTasksCount > 0 ? pendingTasksCount : null,
@@ -56,26 +56,26 @@ export const Navigation: React.FC<NavigationProps> = ({
     },
     {
       id: 'purchases' as ActiveTab,
-      label: 'What is the Purchase Item?',
+      label: 'Purchase Planner',
       sublabel: 'Budget & Wishlist',
       icon: ShoppingBag,
     },
     {
       id: 'goals' as ActiveTab,
-      label: 'What is the Goal?',
+      label: 'Life Goals',
       sublabel: 'Milestones & Targets',
       icon: Target,
     },
     {
       id: 'food_health' as ActiveTab,
-      label: 'What is the Health Thing?',
+      label: 'Food & Health Log',
       sublabel: 'Food, Water & Digestion',
       icon: Utensils,
     },
     {
       id: 'habit_ladder' as ActiveTab,
       label: 'Brain Comfort Ladder',
-      sublabel: '3 → 6 → 11 Day System',
+      sublabel: 'Habit Building System',
       icon: Brain,
     },
     {
