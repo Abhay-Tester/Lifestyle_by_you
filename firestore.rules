@@ -2,6 +2,11 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
+    // Connection health check doc for getDocFromServer test
+    match /test/{docId} {
+      allow read: if true;
+    }
+
     // Each authenticated user can ONLY read and write their own documents under /users/{userId}
     // Users can never access or mix data with other users
     match /users/{userId} {
@@ -13,3 +18,4 @@ service cloud.firestore {
     }
   }
 }
+

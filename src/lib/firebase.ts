@@ -1,18 +1,43 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getFirestore } from 'firebase/firestore';
+import { initializeFirestore, getFirestore, doc, getDocFromServer, Firestore } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import firebaseConfig from '../../firebase-applet-config.json';
 
-// Initialize Firebase
+// Initialize Firebase App
 const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 
-// Initialize Firestore with explicit databaseId if specified in config
-export const db = firebaseConfig.firestoreDatabaseId && firebaseConfig.firestoreDatabaseId !== '(default)'
-  ? getFirestore(app, firebaseConfig.firestoreDatabaseId)
-  : getFirestore(app);
+// Initialize Firestore with long-polling to prevent proxy/iframe backend connection drops
+const dbId = firebaseConfig.firestoreDatabaseId || '(default)';
+
+let firestoreInstance: Firestore;
+try {
+  firestoreInstance = initializeFirestore(
+    app,
+    {
+      experimentalForceLongPolling: true,
+    },
+    dbId
+  );
+} catch {
+  firestoreInstance = getFirestore(app, dbId);
+}
+
+export const db = firestoreInstance;
 
 // Initialize Authentication
 export const auth = getAuth(app);
+
+// Test Firestore backend connection on boot
+async function testConnection() {
+  try {
+    await getDocFromServer(doc(db, 'test', 'connection'));
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('the client is offline')) {
+      console.warn("Firestore running in offline cache mode.");
+    }
+  }
+}
+testConnection();
 
 const USER_CLIENT_ID_KEY = 'lifeos_firestore_client_uid';
 
@@ -36,3 +61,4 @@ export function getCurrentUserId(): string {
     return 'anonymous_user';
   }
 }
+

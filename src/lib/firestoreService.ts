@@ -7,7 +7,7 @@ import {
   deleteDoc, 
   writeBatch 
 } from 'firebase/firestore';
-import { db, getCurrentUserId } from './firebase';
+import { db, auth, getCurrentUserId } from './firebase';
 import { 
   Task, 
   DailyLog, 
@@ -21,7 +21,54 @@ import {
   UserProfile 
 } from '../types';
 
+export enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+export interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId?: string | null;
+    email?: string | null;
+    emailVerified?: boolean | null;
+    isAnonymous?: boolean | null;
+    tenantId?: string | null;
+    providerInfo?: {
+      providerId?: string | null;
+      email?: string | null;
+    }[];
+  };
+}
+
+export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null): void {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+      isAnonymous: auth.currentUser?.isAnonymous,
+      tenantId: auth.currentUser?.tenantId,
+      providerInfo: auth.currentUser?.providerData?.map(provider => ({
+        providerId: provider.providerId,
+        email: provider.email,
+      })) || []
+    },
+    operationType,
+    path
+  };
+  console.warn('Firestore Error Info:', JSON.stringify(errInfo));
+}
+
 export interface CloudUserData {
+
   tasks: Task[];
   dailyLogs: Record<string, DailyLog>;
   studySessions: StudySession[];
@@ -68,89 +115,107 @@ export async function fetchUserCloudData(explicitUserId?: string): Promise<{ dat
   const challengesCol = collection(db, 'users', userId, 'habitChallenges');
   const emergencyNotesCol = collection(db, 'users', userId, 'emergencyNotes');
 
-  const [
-    userDocSnap,
-    tasksSnap,
-    dailyLogsSnap,
-    studySnap,
-    exerciseSnap,
-    mealSnap,
-    goalsSnap,
-    purchasesSnap,
-    challengesSnap,
-    notesSnap,
-  ] = await Promise.all([
-    getDoc(userDocRef),
-    getDocs(tasksCol),
-    getDocs(dailyLogsCol),
-    getDocs(studyCol),
-    getDocs(exerciseCol),
-    getDocs(mealCol),
-    getDocs(goalsCol),
-    getDocs(purchasesCol),
-    getDocs(challengesCol),
-    getDocs(emergencyNotesCol),
-  ]);
+  try {
+    const [
+      userDocSnap,
+      tasksSnap,
+      dailyLogsSnap,
+      studySnap,
+      exerciseSnap,
+      mealSnap,
+      goalsSnap,
+      purchasesSnap,
+      challengesSnap,
+      notesSnap,
+    ] = await Promise.all([
+      getDoc(userDocRef),
+      getDocs(tasksCol),
+      getDocs(dailyLogsCol),
+      getDocs(studyCol),
+      getDocs(exerciseCol),
+      getDocs(mealCol),
+      getDocs(goalsCol),
+      getDocs(purchasesCol),
+      getDocs(challengesCol),
+      getDocs(emergencyNotesCol),
+    ]);
 
-  const profile = userDocSnap.exists() ? (userDocSnap.data()?.profile as UserProfile | undefined) : undefined;
+    const profile = userDocSnap.exists() ? (userDocSnap.data()?.profile as UserProfile | undefined) : undefined;
 
-  const tasks: Task[] = [];
-  tasksSnap.forEach((d) => tasks.push({ ...(d.data() as Task), id: d.id }));
+    const tasks: Task[] = [];
+    tasksSnap.forEach((d) => tasks.push({ ...(d.data() as Task), id: d.id }));
 
-  const dailyLogs: Record<string, DailyLog> = {};
-  dailyLogsSnap.forEach((d) => {
-    const data = d.data() as DailyLog;
-    dailyLogs[data.date || d.id] = data;
-  });
+    const dailyLogs: Record<string, DailyLog> = {};
+    dailyLogsSnap.forEach((d) => {
+      const data = d.data() as DailyLog;
+      dailyLogs[data.date || d.id] = data;
+    });
 
-  const studySessions: StudySession[] = [];
-  studySnap.forEach((d) => studySessions.push({ ...(d.data() as StudySession), id: d.id }));
+    const studySessions: StudySession[] = [];
+    studySnap.forEach((d) => studySessions.push({ ...(d.data() as StudySession), id: d.id }));
 
-  const exerciseLogs: ExerciseLog[] = [];
-  exerciseSnap.forEach((d) => exerciseLogs.push({ ...(d.data() as ExerciseLog), id: d.id }));
+    const exerciseLogs: ExerciseLog[] = [];
+    exerciseSnap.forEach((d) => exerciseLogs.push({ ...(d.data() as ExerciseLog), id: d.id }));
 
-  const mealLogs: MealLog[] = [];
-  mealSnap.forEach((d) => mealLogs.push({ ...(d.data() as MealLog), id: d.id }));
+    const mealLogs: MealLog[] = [];
+    mealSnap.forEach((d) => mealLogs.push({ ...(d.data() as MealLog), id: d.id }));
 
-  const goals: Goal[] = [];
-  goalsSnap.forEach((d) => goals.push({ ...(d.data() as Goal), id: d.id }));
+    const goals: Goal[] = [];
+    goalsSnap.forEach((d) => goals.push({ ...(d.data() as Goal), id: d.id }));
 
-  const purchases: PurchaseItem[] = [];
-  purchasesSnap.forEach((d) => purchases.push({ ...(d.data() as PurchaseItem), id: d.id }));
+    const purchases: PurchaseItem[] = [];
+    purchasesSnap.forEach((d) => purchases.push({ ...(d.data() as PurchaseItem), id: d.id }));
 
-  const habitChallenges: HabitChallenge[] = [];
-  challengesSnap.forEach((d) => habitChallenges.push({ ...(d.data() as HabitChallenge), id: d.id }));
+    const habitChallenges: HabitChallenge[] = [];
+    challengesSnap.forEach((d) => habitChallenges.push({ ...(d.data() as HabitChallenge), id: d.id }));
 
-  const emergencyNotes: EmergencyNote[] = [];
-  notesSnap.forEach((d) => emergencyNotes.push({ ...(d.data() as EmergencyNote), id: d.id }));
+    const emergencyNotes: EmergencyNote[] = [];
+    notesSnap.forEach((d) => emergencyNotes.push({ ...(d.data() as EmergencyNote), id: d.id }));
 
-  const hasData = 
-    !!profile ||
-    tasks.length > 0 ||
-    Object.keys(dailyLogs).length > 0 ||
-    studySessions.length > 0 ||
-    exerciseLogs.length > 0 ||
-    mealLogs.length > 0 ||
-    goals.length > 0 ||
-    purchases.length > 0 ||
-    habitChallenges.length > 0 ||
-    emergencyNotes.length > 0;
+    const hasData = 
+      !!profile ||
+      tasks.length > 0 ||
+      Object.keys(dailyLogs).length > 0 ||
+      studySessions.length > 0 ||
+      exerciseLogs.length > 0 ||
+      mealLogs.length > 0 ||
+      goals.length > 0 ||
+      purchases.length > 0 ||
+      habitChallenges.length > 0 ||
+      emergencyNotes.length > 0;
 
-  return {
-    hasData,
-    data: {
-      tasks,
-      dailyLogs,
-      studySessions,
-      exerciseLogs,
-      mealLogs,
-      goals,
-      purchases,
-      habitChallenges,
-      emergencyNotes,
-      profile,
-    },
-  };
+    return {
+      hasData,
+      data: {
+        tasks,
+        dailyLogs,
+        studySessions,
+        exerciseLogs,
+        mealLogs,
+        goals,
+        purchases,
+        habitChallenges,
+        emergencyNotes,
+        profile,
+      },
+    };
+  } catch (error) {
+    handleFirestoreError(error, OperationType.GET, `users/${userId}`);
+    return {
+      hasData: false,
+      data: {
+        tasks: [],
+        dailyLogs: {},
+        studySessions: [],
+        exerciseLogs: [],
+        mealLogs: [],
+        goals: [],
+        purchases: [],
+        habitChallenges: [],
+        emergencyNotes: [],
+      }
+    };
+  }
 }
 
 /**
@@ -161,107 +226,111 @@ export async function saveAllUserDataToCloud(data: CloudUserData, explicitUserId
   const userId = explicitUserId || getCurrentUserId();
   if (!userId) return;
 
-  // Update user profile document timestamp & profile details
-  await setDoc(
-    doc(db, 'users', userId),
-    {
-      profile: data.profile,
-      userId,
-      lastSyncedAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-    { merge: true }
-  );
+  try {
+    // Update user profile document timestamp & profile details
+    await setDoc(
+      doc(db, 'users', userId),
+      {
+        profile: data.profile,
+        userId,
+        lastSyncedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      },
+      { merge: true }
+    );
 
-  // Sync Tasks
-  if (data.tasks.length > 0) {
-    const taskBatch = writeBatch(db);
-    for (const t of data.tasks) {
-      const taskRef = doc(db, 'users', userId, 'tasks', t.id);
-      taskBatch.set(taskRef, { ...t, userId });
+    // Sync Tasks
+    if (data.tasks.length > 0) {
+      const taskBatch = writeBatch(db);
+      for (const t of data.tasks) {
+        const taskRef = doc(db, 'users', userId, 'tasks', t.id);
+        taskBatch.set(taskRef, { ...t, userId });
+      }
+      await taskBatch.commit();
     }
-    await taskBatch.commit();
-  }
 
-  // Sync Daily Logs
-  const logEntries = Object.entries(data.dailyLogs);
-  if (logEntries.length > 0) {
-    const logsBatch = writeBatch(db);
-    for (const [dateKey, log] of logEntries) {
-      const logRef = doc(db, 'users', userId, 'dailyLogs', dateKey);
-      logsBatch.set(logRef, { ...log, userId, date: dateKey });
+    // Sync Daily Logs
+    const logEntries = Object.entries(data.dailyLogs);
+    if (logEntries.length > 0) {
+      const logsBatch = writeBatch(db);
+      for (const [dateKey, log] of logEntries) {
+        const logRef = doc(db, 'users', userId, 'dailyLogs', dateKey);
+        logsBatch.set(logRef, { ...log, userId, date: dateKey });
+      }
+      await logsBatch.commit();
     }
-    await logsBatch.commit();
-  }
 
-  // Sync Study Sessions
-  if (data.studySessions.length > 0) {
-    const studyBatch = writeBatch(db);
-    for (const s of data.studySessions) {
-      const sRef = doc(db, 'users', userId, 'studySessions', s.id);
-      studyBatch.set(sRef, { ...s, userId });
+    // Sync Study Sessions
+    if (data.studySessions.length > 0) {
+      const studyBatch = writeBatch(db);
+      for (const s of data.studySessions) {
+        const sRef = doc(db, 'users', userId, 'studySessions', s.id);
+        studyBatch.set(sRef, { ...s, userId });
+      }
+      await studyBatch.commit();
     }
-    await studyBatch.commit();
-  }
 
-  // Sync Exercise Logs
-  if (data.exerciseLogs.length > 0) {
-    const exBatch = writeBatch(db);
-    for (const e of data.exerciseLogs) {
-      const eRef = doc(db, 'users', userId, 'exerciseLogs', e.id);
-      exBatch.set(eRef, { ...e, userId });
+    // Sync Exercise Logs
+    if (data.exerciseLogs.length > 0) {
+      const exBatch = writeBatch(db);
+      for (const e of data.exerciseLogs) {
+        const eRef = doc(db, 'users', userId, 'exerciseLogs', e.id);
+        exBatch.set(eRef, { ...e, userId });
+      }
+      await exBatch.commit();
     }
-    await exBatch.commit();
-  }
 
-  // Sync Meal Logs
-  if (data.mealLogs.length > 0) {
-    const mBatch = writeBatch(db);
-    for (const m of data.mealLogs) {
-      const mRef = doc(db, 'users', userId, 'mealLogs', m.id);
-      mBatch.set(mRef, { ...m, userId });
+    // Sync Meal Logs
+    if (data.mealLogs.length > 0) {
+      const mBatch = writeBatch(db);
+      for (const m of data.mealLogs) {
+        const mRef = doc(db, 'users', userId, 'mealLogs', m.id);
+        mBatch.set(mRef, { ...m, userId });
+      }
+      await mBatch.commit();
     }
-    await mBatch.commit();
-  }
 
-  // Sync Goals
-  if (data.goals.length > 0) {
-    const gBatch = writeBatch(db);
-    for (const g of data.goals) {
-      const gRef = doc(db, 'users', userId, 'goals', g.id);
-      gBatch.set(gRef, { ...g, userId });
+    // Sync Goals
+    if (data.goals.length > 0) {
+      const gBatch = writeBatch(db);
+      for (const g of data.goals) {
+        const gRef = doc(db, 'users', userId, 'goals', g.id);
+        gBatch.set(gRef, { ...g, userId });
+      }
+      await gBatch.commit();
     }
-    await gBatch.commit();
-  }
 
-  // Sync Purchases
-  if (data.purchases.length > 0) {
-    const pBatch = writeBatch(db);
-    for (const p of data.purchases) {
-      const pRef = doc(db, 'users', userId, 'purchases', p.id);
-      pBatch.set(pRef, { ...p, userId });
+    // Sync Purchases
+    if (data.purchases.length > 0) {
+      const pBatch = writeBatch(db);
+      for (const p of data.purchases) {
+        const pRef = doc(db, 'users', userId, 'purchases', p.id);
+        pBatch.set(pRef, { ...p, userId });
+      }
+      await pBatch.commit();
     }
-    await pBatch.commit();
-  }
 
-  // Sync Habit Challenges
-  if (data.habitChallenges.length > 0) {
-    const hcBatch = writeBatch(db);
-    for (const hc of data.habitChallenges) {
-      const hcRef = doc(db, 'users', userId, 'habitChallenges', hc.id);
-      hcBatch.set(hcRef, { ...hc, userId });
+    // Sync Habit Challenges
+    if (data.habitChallenges.length > 0) {
+      const hcBatch = writeBatch(db);
+      for (const hc of data.habitChallenges) {
+        const hcRef = doc(db, 'users', userId, 'habitChallenges', hc.id);
+        hcBatch.set(hcRef, { ...hc, userId });
+      }
+      await hcBatch.commit();
     }
-    await hcBatch.commit();
-  }
 
-  // Sync Emergency Notes
-  if (data.emergencyNotes && data.emergencyNotes.length > 0) {
-    const notesBatch = writeBatch(db);
-    for (const note of data.emergencyNotes) {
-      const noteRef = doc(db, 'users', userId, 'emergencyNotes', note.id);
-      notesBatch.set(noteRef, { ...note, userId });
+    // Sync Emergency Notes
+    if (data.emergencyNotes && data.emergencyNotes.length > 0) {
+      const notesBatch = writeBatch(db);
+      for (const note of data.emergencyNotes) {
+        const noteRef = doc(db, 'users', userId, 'emergencyNotes', note.id);
+        notesBatch.set(noteRef, { ...note, userId });
+      }
+      await notesBatch.commit();
     }
-    await notesBatch.commit();
+  } catch (error) {
+    handleFirestoreError(error, OperationType.WRITE, `users/${userId}`);
   }
 }
 
@@ -275,6 +344,6 @@ export async function deleteCloudItem(collectionName: string, docId: string, exp
     const docRef = doc(db, 'users', userId, collectionName, docId);
     await deleteDoc(docRef);
   } catch (err) {
-    console.error(`Error deleting ${collectionName}/${docId}:`, err);
+    handleFirestoreError(err, OperationType.DELETE, `users/${explicitUserId || 'me'}/${collectionName}/${docId}`);
   }
 }
