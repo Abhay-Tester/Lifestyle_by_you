@@ -116,20 +116,24 @@ export interface HabitChallenge {
   brainComfortTip?: string;
 }
 
-export type EmergencyNoteCategory = 'client_request' | 'emergency_todo' | 'quick_thought' | 'meeting_note';
+export type EmergencyNoteCategory = 'client_request' | 'emergency_todo' | 'quick_thought' | 'meeting_note' | 'general' | 'idea' | 'reminder';
 
 export interface EmergencyNote {
   id: string;
   title: string;
   content: string;
+  date?: string; // YYYY-MM-DD
+  time?: string; // HH:mm
   clientName?: string;
   phoneNumber?: string;
-  category: EmergencyNoteCategory;
-  priority: Priority;
-  isCompleted: boolean;
+  category?: EmergencyNoteCategory;
+  priority?: Priority;
+  isCompleted?: boolean;
   createdAt: string;
   updatedAt?: string;
 }
+
+export type Note = EmergencyNote;
 
 export interface UserProfile {
   name: string;

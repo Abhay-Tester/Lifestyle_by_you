@@ -1,15 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   X, 
   Sparkles, 
   Send, 
-  ShieldAlert, 
-  User, 
-  Phone, 
+  Calendar,
+  Clock,
   CheckCircle2,
   FileText
 } from 'lucide-react';
-import { EmergencyNote, EmergencyNoteCategory, Priority } from '../types';
+import { EmergencyNote } from '../types';
+import { getTodayDateString, getCurrentTimeString } from '../utils/date';
 
 interface EmergencyQuickModalProps {
   isOpen: boolean;
@@ -24,11 +24,18 @@ export const EmergencyQuickModal: React.FC<EmergencyQuickModalProps> = ({
 }) => {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const [clientName, setClientName] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [priority, setPriority] = useState<Priority>('high');
-  const [category, setCategory] = useState<EmergencyNoteCategory>('client_request');
+  const [noteDate, setNoteDate] = useState(getTodayDateString());
+  const [noteTime, setNoteTime] = useState(getCurrentTimeString());
   const [showSuccessToast, setShowSuccessToast] = useState(false);
+
+  useEffect(() => {
+    if (isOpen) {
+      setNoteDate(getTodayDateString());
+      setNoteTime(getCurrentTimeString());
+      setTitle('');
+      setContent('');
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -37,12 +44,10 @@ export const EmergencyQuickModal: React.FC<EmergencyQuickModalProps> = ({
     if (!title.trim() && !content.trim()) return;
 
     onAddNote({
-      title: title.trim() || (clientName ? `Client Call: ${clientName}` : 'Urgent Client Note'),
+      title: title.trim() || 'Untitled Note',
       content: content.trim(),
-      clientName: clientName.trim() || undefined,
-      phoneNumber: phoneNumber.trim() || undefined,
-      category,
-      priority,
+      date: noteDate || getTodayDateString(),
+      time: noteTime || getCurrentTimeString(),
       isCompleted: false,
     });
 
@@ -51,40 +56,38 @@ export const EmergencyQuickModal: React.FC<EmergencyQuickModalProps> = ({
       setShowSuccessToast(false);
       setTitle('');
       setContent('');
-      setClientName('');
-      setPhoneNumber('');
       onClose();
-    }, 900);
+    }, 700);
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/70 backdrop-blur-xs animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/60 backdrop-blur-xs animate-in fade-in duration-150">
       
       {/* Modal Container */}
       <div 
-        className="w-full max-w-lg bg-white rounded-3xl shadow-2xl border-2 border-rose-400 overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-150"
+        className="w-full max-w-lg bg-white rounded-3xl shadow-2xl border border-slate-200 overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-150"
         role="dialog"
       >
         
-        {/* Header with emergency alert styling */}
-        <div className="bg-gradient-to-r from-rose-600 via-rose-500 to-amber-600 text-white p-4 sm:p-5 flex items-center justify-between">
+        {/* Header */}
+        <div className="bg-slate-900 text-white p-4 sm:p-5 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center font-bold text-lg shadow-inner">
-              <ShieldAlert className="w-5 h-5 text-white" />
+            <div className="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center font-bold text-white shadow-inner">
+              <FileText className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-extrabold text-sm sm:text-base leading-tight flex items-center gap-1.5">
-                Client Emergency Note
+              <h3 className="font-bold text-sm sm:text-base leading-tight">
+                Add Note
               </h3>
-              <p className="text-[11px] text-rose-100 font-medium">
-                Instant note capture for urgent calls & client requests
+              <p className="text-[11px] text-slate-300">
+                Save a note with custom or current date and time
               </p>
             </div>
           </div>
 
           <button
             onClick={onClose}
-            className="p-1.5 rounded-full hover:bg-white/20 text-white transition-colors cursor-pointer"
+            className="p-1.5 rounded-full hover:bg-white/20 text-slate-300 hover:text-white transition-colors cursor-pointer"
             title="Close"
           >
             <X className="w-5 h-5" />
@@ -93,9 +96,9 @@ export const EmergencyQuickModal: React.FC<EmergencyQuickModalProps> = ({
 
         {/* Success Feedback Banner */}
         {showSuccessToast && (
-          <div className="bg-emerald-500 text-white p-3 text-center text-xs font-bold flex items-center justify-center gap-2 animate-in slide-in-from-top duration-200">
+          <div className="bg-emerald-600 text-white p-2.5 text-center text-xs font-bold flex items-center justify-center gap-2 animate-in slide-in-from-top duration-200">
             <CheckCircle2 className="w-4 h-4" />
-            <span>Emergency note saved & synced!</span>
+            <span>Note saved successfully!</span>
           </div>
         )}
 
@@ -105,107 +108,69 @@ export const EmergencyQuickModal: React.FC<EmergencyQuickModalProps> = ({
           {/* Note Title */}
           <div>
             <label className="block font-bold text-slate-800 mb-1 text-xs">
-              Subject / Request Title *
+              Note Title *
             </label>
             <input
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="e.g. Client requested database export before 4 PM"
-              className="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-rose-500 bg-slate-50/50"
+              placeholder="e.g. Key decision, meeting note, idea..."
+              className="w-full text-xs sm:text-sm px-3.5 py-2.5 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50/50"
               autoFocus
               required
             />
           </div>
 
-          {/* Client Name & Phone Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block font-bold text-slate-700 mb-1 text-[11px]">
-                Client / Caller Name
-              </label>
-              <div className="relative">
-                <User className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3" />
-                <input
-                  type="text"
-                  value={clientName}
-                  onChange={(e) => setClientName(e.target.value)}
-                  placeholder="Client Name"
-                  className="w-full pl-8 pr-3 py-2 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-rose-500"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block font-bold text-slate-700 mb-1 text-[11px]">
-                Contact Number
-              </label>
-              <div className="relative">
-                <Phone className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3" />
-                <input
-                  type="tel"
-                  value={phoneNumber}
-                  onChange={(e) => setPhoneNumber(e.target.value)}
-                  placeholder="+91 98765 43210"
-                  className="w-full pl-8 pr-3 py-2 rounded-xl border border-slate-300 text-xs focus:ring-2 focus:ring-rose-500"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Category & Priority selector */}
+          {/* Date & Time Grid */}
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block font-bold text-slate-700 mb-1 text-[11px]">
-                Category
+              <label className="block font-bold text-slate-700 mb-1 text-[11px] flex items-center gap-1">
+                <Calendar className="w-3 h-3 text-indigo-600" />
+                <span>Date</span>
               </label>
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value as EmergencyNoteCategory)}
-                className="w-full px-2.5 py-2 rounded-xl border border-slate-300 text-xs bg-white focus:ring-2 focus:ring-rose-500"
-              >
-                <option value="client_request">📞 Client Call</option>
-                <option value="emergency_todo">🚨 Urgent Task</option>
-                <option value="meeting_note">📝 Meeting</option>
-                <option value="quick_thought">💡 Idea</option>
-              </select>
+              <input
+                type="date"
+                value={noteDate}
+                onChange={(e) => setNoteDate(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs bg-slate-50/50 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                required
+              />
             </div>
 
             <div>
-              <label className="block font-bold text-slate-700 mb-1 text-[11px]">
-                Urgency
+              <label className="block font-bold text-slate-700 mb-1 text-[11px] flex items-center gap-1">
+                <Clock className="w-3 h-3 text-indigo-600" />
+                <span>Time</span>
               </label>
-              <select
-                value={priority}
-                onChange={(e) => setPriority(e.target.value as Priority)}
-                className="w-full px-2.5 py-2 rounded-xl border border-slate-300 text-xs bg-white focus:ring-2 focus:ring-rose-500 font-bold"
-              >
-                <option value="high">🔴 High Emergency</option>
-                <option value="medium">🟡 Medium</option>
-                <option value="low">🟢 Normal</option>
-              </select>
+              <input
+                type="time"
+                value={noteTime}
+                onChange={(e) => setNoteTime(e.target.value)}
+                className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs bg-slate-50/50 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                required
+              />
             </div>
           </div>
 
-          {/* Note content / instructions */}
+          {/* Note content */}
           <div>
             <label className="block font-bold text-slate-800 mb-1 text-xs">
-              Instructions & Emergency Details *
+              Note Text *
             </label>
             <textarea
               rows={4}
               value={content}
               onChange={(e) => setContent(e.target.value)}
-              placeholder="Type urgent instructions, deliverables, or notes from the conversation..."
-              className="w-full text-xs sm:text-sm p-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-rose-500 bg-slate-50/50"
+              placeholder="Write your note details here..."
+              className="w-full text-xs sm:text-sm p-3 rounded-xl border border-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-slate-50/50 leading-relaxed"
               required
             />
           </div>
 
           {/* Footer Action Buttons */}
-          <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-            <span className="text-[10px] text-slate-400 font-medium">
-              Saved instantly to your secure lifestyle cloud
+          <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+            <span className="text-[11px] text-slate-400 font-medium">
+              Saved automatically with timestamp
             </span>
 
             <div className="flex items-center gap-2">
@@ -218,7 +183,7 @@ export const EmergencyQuickModal: React.FC<EmergencyQuickModalProps> = ({
               </button>
               <button
                 type="submit"
-                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow-md transition-all flex items-center gap-1.5 cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
               >
                 <Send className="w-3.5 h-3.5" />
                 <span>Save Note</span>

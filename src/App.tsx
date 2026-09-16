@@ -29,7 +29,7 @@ import {
   defaultUserProfile,
   createDefaultUserProfile
 } from './utils/storage';
-import { getTodayDateString, shiftDate } from './utils/date';
+import { getTodayDateString, shiftDate, getCurrentTimeString } from './utils/date';
 import { 
   fetchUserCloudData, 
   saveAllUserDataToCloud, 
@@ -37,7 +37,7 @@ import {
 } from './lib/firestoreService';
 import { onAuthStateChanged, signOut, User as FirebaseUser } from 'firebase/auth';
 import { auth } from './lib/firebase';
-import { FileText, ShieldAlert } from 'lucide-react';
+import { FileText } from 'lucide-react';
 
 import { Header } from './components/Header';
 import { Navigation } from './components/Navigation';
@@ -573,12 +573,16 @@ export default function App() {
     if (currentUserId) deleteCloudItem('purchases', id, currentUserId);
   };
 
-  // Emergency Notes Handlers
+  // Notes Handlers
   const handleAddEmergencyNote = (noteData: Omit<EmergencyNote, 'id' | 'createdAt'>) => {
+    const noteDate = noteData.date || today;
+    const noteTime = noteData.time || getCurrentTimeString();
     const newNote: EmergencyNote = {
       ...noteData,
-      id: `en-${Date.now()}`,
-      createdAt: today,
+      id: `n-${Date.now()}`,
+      date: noteDate,
+      time: noteTime,
+      createdAt: noteDate,
     };
     setEmergencyNotes((prev) => [newNote, ...prev]);
   };
@@ -835,23 +839,23 @@ export default function App() {
         </main>
       </div>
 
-      {/* Floating Emergency Note Button (visible prominently on phone view) */}
+      {/* Floating Quick Note Button (visible prominently on phone view) */}
       <div className="fixed bottom-5 right-5 z-40 md:hidden flex flex-col items-end gap-1.5">
         <button
           onClick={() => setIsEmergencyModalOpen(true)}
-          className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-rose-600 to-amber-500 text-white shadow-xl flex items-center justify-center border-2 border-white active:scale-95 transition-all cursor-pointer relative"
-          title="Emergency Note / Client Call Record"
-          aria-label="Emergency Note"
+          className="w-14 h-14 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-xl flex items-center justify-center border-2 border-white active:scale-95 transition-all cursor-pointer relative"
+          title="Add Quick Note"
+          aria-label="Add Quick Note"
         >
           <FileText className="w-6 h-6" />
-          {pendingEmergencyNotesCount > 0 && (
-            <span className="absolute -top-1 -right-1 w-5 h-5 bg-rose-950 text-white rounded-full text-[10px] font-black border-2 border-white flex items-center justify-center animate-pulse">
-              {pendingEmergencyNotesCount}
+          {emergencyNotes.length > 0 && (
+            <span className="absolute -top-1 -right-1 w-5 h-5 bg-indigo-950 text-white rounded-full text-[10px] font-black border-2 border-white flex items-center justify-center">
+              {emergencyNotes.length}
             </span>
           )}
         </button>
-        <span className="px-2 py-0.5 rounded-md bg-slate-900/90 text-white text-[10px] font-extrabold shadow-sm backdrop-blur-xs">
-          Client Note 🚨
+        <span className="px-2 py-0.5 rounded-md bg-slate-900/90 text-white text-[10px] font-bold shadow-xs backdrop-blur-xs">
+          New Note 📝
         </span>
       </div>
 

@@ -49,11 +49,10 @@ export const Navigation: React.FC<NavigationProps> = ({
   const sideMenuOptions = [
     {
       id: 'notes' as ActiveTab,
-      label: 'Emergency & Client Notes',
-      sublabel: 'Urgent Calls, Requests & Thoughts',
+      label: 'Notes',
+      sublabel: 'Quick Thoughts & Logs',
       icon: FileText,
       badge: emergencyNotesCount > 0 ? emergencyNotesCount : null,
-      urgent: true,
     },
     {
       id: 'purchases' as ActiveTab,
@@ -159,14 +158,16 @@ export const Navigation: React.FC<NavigationProps> = ({
             onClick={() => handleSelectTab('notes')}
             className={`px-3 py-1.5 rounded-lg text-xs font-bold shrink-0 transition-all cursor-pointer flex items-center gap-1.5 ${
               activeTab === 'notes'
-                ? 'bg-rose-600 text-white shadow-xs'
-                : 'bg-rose-50 text-rose-800 hover:bg-rose-100 border border-rose-200'
+                ? 'bg-indigo-600 text-white shadow-xs'
+                : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200'
             }`}
           >
-            <FileText className="w-3.5 h-3.5 text-rose-500" />
-            <span>Notes 🚨</span>
+            <FileText className="w-3.5 h-3.5" />
+            <span>Notes</span>
             {emergencyNotesCount > 0 && (
-              <span className="px-1.5 py-0.2 rounded-full text-[10px] font-extrabold bg-rose-950 text-white animate-pulse">
+              <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-extrabold ${
+                activeTab === 'notes' ? 'bg-white text-indigo-700' : 'bg-slate-100 text-slate-700 border border-slate-200'
+              }`}>
                 {emergencyNotesCount}
               </span>
             )}
@@ -346,7 +347,7 @@ export const Navigation: React.FC<NavigationProps> = ({
                       isActive
                         ? 'bg-slate-900 text-white font-bold shadow-xs'
                         : isNotes
-                        ? 'text-rose-950 bg-rose-50/70 hover:bg-rose-100/80 border border-rose-200/60 font-medium'
+                        ? 'text-slate-800 bg-indigo-50/40 hover:bg-indigo-50/70 border border-indigo-100 font-medium'
                         : isProfile
                         ? 'text-slate-800 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 font-semibold'
                         : 'text-slate-700 hover:text-slate-900 hover:bg-slate-100/80'
@@ -357,7 +358,7 @@ export const Navigation: React.FC<NavigationProps> = ({
                         isActive 
                           ? 'text-indigo-400' 
                           : isNotes
-                          ? 'text-rose-600'
+                          ? 'text-indigo-600'
                           : isProfile 
                           ? 'text-indigo-600' 
                           : 'text-slate-500'
@@ -378,7 +379,7 @@ export const Navigation: React.FC<NavigationProps> = ({
                     </div>
 
                     {tab.badge ? (
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-rose-600 text-white shrink-0 ml-1">
+                      <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold bg-indigo-600 text-white shrink-0 ml-1">
                         {tab.badge}
                       </span>
                     ) : isActive ? (

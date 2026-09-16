@@ -67,3 +67,22 @@ export function isWeekday(dateStr: string): boolean {
 export function isWeekend(dateStr: string): boolean {
   return !isWeekday(dateStr);
 }
+
+export function getCurrentTimeString(): string {
+  const d = new Date();
+  const hours = String(d.getHours()).padStart(2, '0');
+  const minutes = String(d.getMinutes()).padStart(2, '0');
+  return `${hours}:${minutes}`;
+}
+
+export function formatTimeFriendly(timeStr?: string): string {
+  if (!timeStr) return '';
+  const parts = timeStr.split(':');
+  if (parts.length < 2) return timeStr;
+  const h = parseInt(parts[0], 10);
+  const m = parseInt(parts[1], 10);
+  if (isNaN(h) || isNaN(m)) return timeStr;
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const displayH = h % 12 || 12;
+  return `${displayH}:${String(m).padStart(2, '0')} ${ampm}`;
+}

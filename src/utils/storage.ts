@@ -319,22 +319,22 @@ export const defaultHabitChallenges: HabitChallenge[] = [
 
 export const defaultEmergencyNotes: EmergencyNote[] = [
   {
-    id: 'en-1',
-    title: 'Client Urgent Feature Request - Dashboard Export',
-    content: 'Client called needing CSV and JSON export options for monthly habit sheets before tomorrow morning meeting.',
-    clientName: 'Alpha Tech Client',
-    phoneNumber: '+91 98765 43210',
-    category: 'client_request',
+    id: 'n-1',
+    title: 'Daily Reflection & Priority Focus',
+    content: 'Completed morning routine and 3L water intake. Key focus for today is deep work on project architecture without checking phone notifications.',
+    date: today,
+    time: '09:30',
     priority: 'high',
     isCompleted: false,
     createdAt: today,
   },
   {
-    id: 'en-2',
-    title: 'Critical Server API Rate Limiting Verification',
-    content: 'Double-check database write batches and ensure retry backoff logic handles any spike gracefully.',
-    category: 'emergency_todo',
-    priority: 'high',
+    id: 'n-2',
+    title: 'Cognitive Momentum & Habit Cues',
+    content: 'Insight from reading: small consistent actions reduce psychological resistance. Lower friction on the starting step.',
+    date: today,
+    time: '14:45',
+    priority: 'medium',
     isCompleted: false,
     createdAt: today,
   }
