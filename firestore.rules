@@ -2,13 +2,13 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     
-    // Allow users to read and write their user document and subcollections
-    // Uses client-generated or auth userId
+    // Each authenticated user can ONLY read and write their own documents under /users/{userId}
+    // Users can never access or mix data with other users
     match /users/{userId} {
-      allow read, write: if true;
+      allow read, write: if request.auth != null && request.auth.uid == userId;
 
       match /{subcollection}/{docId} {
-        allow read, write: if true;
+        allow read, write: if request.auth != null && request.auth.uid == userId;
       }
     }
   }

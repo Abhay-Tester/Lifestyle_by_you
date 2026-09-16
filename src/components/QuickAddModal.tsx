@@ -140,8 +140,8 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white border border-slate-200 rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-xl text-slate-900">
+    <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-3 sm:p-4">
+      <div className="bg-white border border-slate-200 rounded-2xl max-w-lg w-full p-4 sm:p-6 space-y-4 shadow-xl text-slate-900 max-h-[92vh] overflow-y-auto">
         
         <div className="flex items-center justify-between border-b border-slate-100 pb-3">
           <h3 className="font-bold text-lg flex items-center gap-2 text-slate-900">

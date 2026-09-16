@@ -17,10 +17,14 @@ export const auth = getAuth(app);
 const USER_CLIENT_ID_KEY = 'lifeos_firestore_client_uid';
 
 /**
- * Get or create a persistent client UID for storing and syncing user data in Firestore.
- * This guarantees reliable sync even if anonymous sign-in is disabled in the Firebase project console.
+ * Get the currently authenticated Firebase user's UID.
+ * If user is authenticated, returns user.uid (ensuring strict per-user isolation).
+ * If for any reason no auth user exists yet, returns a device-scoped client ID as fallback.
  */
-export function getOrCreateClientUserId(): string {
+export function getCurrentUserId(): string {
+  if (auth.currentUser?.uid) {
+    return auth.currentUser.uid;
+  }
   try {
     let uid = localStorage.getItem(USER_CLIENT_ID_KEY);
     if (!uid) {
@@ -29,6 +33,6 @@ export function getOrCreateClientUserId(): string {
     }
     return uid;
   } catch {
-    return 'default_local_user';
+    return 'anonymous_user';
   }
 }

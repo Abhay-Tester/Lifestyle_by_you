@@ -6,6 +6,7 @@ export type TaskCategory =
   | 'study' 
   | 'exercise' 
   | 'health' 
+  | 'work' 
   | 'general';
 
 export interface Task {
@@ -13,47 +14,47 @@ export interface Task {
   title: string;
   category: TaskCategory;
   priority: Priority;
-  scheduledTime?: string; // e.g. "06:30"
-  completedDates: Record<string, boolean>; // key YYYY-MM-DD -> completed status
-  recurring: 'daily' | 'weekdays' | 'weekends' | 'once';
+  scheduledTime?: string; // HH:mm
+  completedDates: Record<string, boolean>; // key: YYYY-MM-DD, value: true/false
+  recurring: 'daily' | 'weekdays' | 'weekends' | 'custom';
   notes?: string;
   createdAt: string;
 }
 
 export interface DailyLog {
   date: string; // YYYY-MM-DD
-  targetWakeTime: string; // e.g. "06:00"
-  actualWakeTime?: string; // e.g. "06:15"
-  targetSleepTime: string; // e.g. "22:00"
-  actualSleepTime?: string; // e.g. "21:45"
-  sleptEarly: boolean;
-  sleepQuality: number; // 1 - 5
-  mood: number; // 1 - 5
-  energyLevel: number; // 1 - 5
-  waterIntakeMl: number; // e.g., 2500
-  waterGoalMl: number; // e.g., 3000
-  digestionStatus: 'great' | 'normal' | 'bloated' | 'sluggish' | 'acidic' | 'sensitive';
+  targetWakeTime: string; // HH:mm (default 06:00)
+  actualWakeTime: string; // HH:mm
+  targetSleepTime: string; // HH:mm (default 22:00)
+  actualSleepTime: string; // HH:mm
+  sleptEarly: boolean; // whether slept before or on 22:00
+  sleepQuality: number; // 1 to 5
+  mood: number; // 1 to 5
+  energyLevel: number; // 1 to 5
+  waterIntakeMl: number; // in milliliters (e.g. 3000)
+  waterGoalMl: number; // default 3000
+  digestionStatus: 'great' | 'normal' | 'bloated' | 'acidic' | 'sluggish' | 'okay';
+  gutComfortRating: number; // 1 to 5
   digestionNotes?: string;
-  gutComfortRating: number; // 1 - 5
   notes?: string;
 }
 
 export interface StudySession {
   id: string;
-  date: string; // YYYY-MM-DD
   subject: string;
   durationMinutes: number;
-  type: 'reading' | 'practice' | 'deep_work' | 'revision' | 'lecture';
+  date: string; // YYYY-MM-DD
+  type: 'deep_work' | 'reading' | 'practice' | 'revision' | 'lecture';
   notes?: string;
   completed: boolean;
 }
 
 export interface ExerciseLog {
   id: string;
-  date: string; // YYYY-MM-DD
-  workoutType: 'cardio' | 'strength' | 'yoga' | 'walking' | 'sports' | 'stretching' | 'hiit';
+  workoutType: 'strength' | 'walking' | 'running' | 'yoga' | 'cycling' | 'stretching';
   durationMinutes: number;
   intensity: 'light' | 'moderate' | 'intense';
+  date: string; // YYYY-MM-DD
   caloriesBurned?: number;
   notes?: string;
   completed: boolean;
@@ -61,11 +62,11 @@ export interface ExerciseLog {
 
 export interface MealLog {
   id: string;
+  mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack' | 'hydration';
   date: string; // YYYY-MM-DD
-  time: string; // e.g. "08:30"
-  mealType: 'breakfast' | 'lunch' | 'dinner' | 'snack';
+  time: string;
   foodItems: string;
-  digestionImpact: 'easy' | 'neutral' | 'heavy' | 'irritating';
+  digestionImpact: 'easy' | 'moderate' | 'heavy';
   fiberRich: boolean;
   notes?: string;
 }
@@ -74,7 +75,6 @@ export interface GoalMilestone {
   id: string;
   title: string;
   completed: boolean;
-  targetDate?: string;
 }
 
 export interface Goal {
@@ -82,27 +82,27 @@ export interface Goal {
   title: string;
   category: 'health' | 'career' | 'learning' | 'finance' | 'lifestyle' | 'mindset';
   targetDate: string;
-  progress: number; // 0 - 100
-  status: 'not_started' | 'in_progress' | 'completed';
+  progress: number; // 0 to 100
+  status: 'not_started' | 'in_progress' | 'completed' | 'paused';
   milestones: GoalMilestone[];
-  motivation: string;
+  motivation?: string;
   createdAt: string;
 }
 
 export interface PurchaseItem {
   id: string;
   name: string;
-  category: 'tech' | 'health' | 'home' | 'study' | 'fitness' | 'clothing' | 'other';
-  priority: 'must_have' | 'high' | 'medium' | 'low';
   estimatedCost: number;
+  category: 'study' | 'health' | 'home' | 'tech' | 'fitness' | 'clothing' | 'other';
+  status: 'saved_for' | 'planned' | 'purchased' | 'canceled';
+  priority: Priority;
   targetDate?: string;
-  status: 'planned' | 'saved_for' | 'purchased' | 'canceled';
-  url?: string;
   notes?: string;
+  productUrl?: string;
   createdAt: string;
 }
 
-export type LadderStage = '3_day' | '6_day' | '11_day' | '21_day' | 'progressive';
+export type LadderStage = '3_day' | '6_day' | '11_day' | '21_day';
 
 export interface HabitChallenge {
   id: string;
@@ -114,6 +114,21 @@ export interface HabitChallenge {
   startDate: string;
   notes?: string;
   brainComfortTip?: string;
+}
+
+export type EmergencyNoteCategory = 'client_request' | 'emergency_todo' | 'quick_thought' | 'meeting_note';
+
+export interface EmergencyNote {
+  id: string;
+  title: string;
+  content: string;
+  clientName?: string;
+  phoneNumber?: string;
+  category: EmergencyNoteCategory;
+  priority: Priority;
+  isCompleted: boolean;
+  createdAt: string;
+  updatedAt?: string;
 }
 
 export interface UserProfile {
@@ -136,5 +151,6 @@ export type ActiveTab =
   | 'food_health' 
   | 'goals' 
   | 'purchases' 
+  | 'notes'
   | 'analytics'
   | 'profile';

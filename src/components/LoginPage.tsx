@@ -6,7 +6,6 @@ import {
   EyeOff, 
   AlertCircle,
   Mail,
-  UserPlus,
   LogIn,
   CheckCircle2,
   Shield,
@@ -14,35 +13,29 @@ import {
 } from 'lucide-react';
 import { 
   signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword,
-  sendPasswordResetEmail,
-  updateProfile as updateFirebaseProfile
+  sendPasswordResetEmail 
 } from 'firebase/auth';
 import { auth } from '../lib/firebase';
-import { UserProfile } from '../types';
 
 interface LoginPageProps {
   onSuccessLogin: (userEmail?: string) => void;
-  userProfile: UserProfile;
 }
 
 export const LoginPage: React.FC<LoginPageProps> = ({
   onSuccessLogin,
-  userProfile,
 }) => {
-  const [isRegisterMode, setIsRegisterMode] = useState(false);
   const [isForgotMode, setIsForgotMode] = useState(false);
 
-  const [email, setEmail] = useState(userProfile.email || 'abhaytoriya23@gmail.com');
+  // Clean empty inputs by default (no prefilled values)
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [displayName, setDisplayName] = useState(userProfile.name || 'Abhay Toriya');
 
   const [showPassword, setShowPassword] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [infoMsg, setInfoMsg] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Handle Firebase Email/Password Authentication
+  // Handle Firebase Email/Password Sign-In
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg('');
@@ -53,6 +46,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({
 
     // Forgot Password Flow
     if (isForgotMode) {
+      if (!cleanEmail) {
+        setErrorMsg('Please enter your registered email address.');
+        setIsSubmitting(false);
+        return;
+      }
       try {
         await sendPasswordResetEmail(auth, cleanEmail);
         setInfoMsg(`Password reset link sent to ${cleanEmail}. Please check your inbox.`);
@@ -64,7 +62,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
         } else if (errorCode === 'auth/invalid-email') {
           setErrorMsg('Please enter a valid email address.');
         } else {
-          setErrorMsg('Unable to send password reset email. Check email details.');
+          setErrorMsg('Unable to send password reset email. Please verify your email.');
         }
       } finally {
         setIsSubmitting(false);
@@ -72,33 +70,10 @@ export const LoginPage: React.FC<LoginPageProps> = ({
       return;
     }
 
-    // Password strength check on registration
-    if (isRegisterMode && password.length < 6) {
-      setErrorMsg('Password must be at least 6 characters long.');
-      setIsSubmitting(false);
-      return;
-    }
-
     try {
-      if (isRegisterMode) {
-        // Real Firebase User Registration
-        const credential = await createUserWithEmailAndPassword(auth, cleanEmail, password);
-        if (credential.user && displayName.trim()) {
-          try {
-            await updateFirebaseProfile(credential.user, { displayName: displayName.trim() });
-          } catch {
-            // non-fatal
-          }
-        }
-        setInfoMsg('Firebase account created successfully! Signing in...');
-        setTimeout(() => {
-          onSuccessLogin(credential.user.email || cleanEmail);
-        }, 500);
-      } else {
-        // Real Firebase User Sign In
-        const credential = await signInWithEmailAndPassword(auth, cleanEmail, password);
-        onSuccessLogin(credential.user.email || cleanEmail);
-      }
+      // Direct Firebase User Sign In
+      const credential = await signInWithEmailAndPassword(auth, cleanEmail, password);
+      onSuccessLogin(credential.user.email || cleanEmail);
     } catch (err: unknown) {
       console.warn('Firebase Auth error:', err);
       const errorCode = (err as { code?: string })?.code || '';
@@ -106,17 +81,11 @@ export const LoginPage: React.FC<LoginPageProps> = ({
       if (errorCode === 'auth/invalid-credential' || errorCode === 'auth/wrong-password') {
         setErrorMsg('Invalid email or password. Please verify your credentials.');
       } else if (errorCode === 'auth/user-not-found') {
-        setErrorMsg('No account found with this email. You can create one below.');
-        setIsRegisterMode(true);
-      } else if (errorCode === 'auth/email-already-in-use') {
-        setErrorMsg('This email is already registered. Please sign in instead.');
-        setIsRegisterMode(false);
-      } else if (errorCode === 'auth/weak-password') {
-        setErrorMsg('Password must be at least 6 characters long.');
+        setErrorMsg('No user account found matching this email address.');
+      } else if (errorCode === 'auth/invalid-email') {
+        setErrorMsg('Please enter a valid email address.');
       } else if (errorCode === 'auth/too-many-requests') {
-        setErrorMsg('Access temporarily blocked due to many failed attempts. Try again in a few minutes or reset password.');
-      } else if (errorCode === 'auth/operation-not-allowed' || errorCode === 'auth/configuration-not-found') {
-        setErrorMsg('Email/Password provider needs to be enabled in Firebase Console ➔ Authentication ➔ Sign-in method.');
+        setErrorMsg('Access temporarily blocked due to multiple failed attempts. Try again in a few minutes or reset password.');
       } else {
         setErrorMsg((err as Error)?.message || 'Authentication error. Please check your credentials.');
       }
@@ -150,8 +119,6 @@ export const LoginPage: React.FC<LoginPageProps> = ({
           <p className="text-xs text-slate-400 mt-1">
             {isForgotMode 
               ? 'Reset your account password'
-              : isRegisterMode 
-              ? 'Create your permanent Firebase account' 
               : 'Sign in to access your personal system'}
           </p>
         </div>
@@ -175,25 +142,7 @@ export const LoginPage: React.FC<LoginPageProps> = ({
 
           <form onSubmit={handleSubmit} className="space-y-4">
             
-            {/* Full Name for Registration */}
-            {isRegisterMode && !isForgotMode && (
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-300 flex items-center justify-between">
-                  <span>Full Name</span>
-                  <span className="text-[10px] text-slate-400 font-normal">Profile display</span>
-                </label>
-                <input
-                  type="text"
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  placeholder="e.g. Abhay Toriya"
-                  required
-                  className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-sm focus:outline-hidden focus:ring-2 focus:ring-indigo-500 text-white placeholder-slate-500 font-medium"
-                />
-              </div>
-            )}
-
-            {/* Email Address */}
+            {/* Email Address - Clean empty field */}
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-300 flex items-center gap-1.5">
                 <Mail className="w-3.5 h-3.5 text-indigo-400" />
@@ -203,8 +152,9 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="e.g. abhaytoriya23@gmail.com"
+                placeholder="Enter your email"
                 required
+                autoComplete="email"
                 className="w-full px-3.5 py-2.5 bg-slate-950 border border-slate-700 rounded-xl text-sm focus:outline-hidden focus:ring-2 focus:ring-indigo-500 text-white placeholder-slate-500 font-medium"
               />
             </div>
@@ -217,23 +167,22 @@ export const LoginPage: React.FC<LoginPageProps> = ({
                     <KeyRound className="w-3.5 h-3.5 text-indigo-400" />
                     Password
                   </label>
-                  {!isRegisterMode && (
-                    <button
-                      type="button"
-                      onClick={() => { setIsForgotMode(true); setErrorMsg(''); setInfoMsg(''); }}
-                      className="text-[11px] text-indigo-400 hover:text-indigo-300 hover:underline"
-                    >
-                      Forgot?
-                    </button>
-                  )}
+                  <button
+                    type="button"
+                    onClick={() => { setIsForgotMode(true); setErrorMsg(''); setInfoMsg(''); }}
+                    className="text-[11px] text-indigo-400 hover:text-indigo-300 hover:underline"
+                  >
+                    Forgot?
+                  </button>
                 </div>
                 <div className="relative">
                   <input
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    placeholder={isRegisterMode ? 'Choose a strong password (min 6 chars)' : 'Enter your password'}
+                    placeholder="Enter your password"
                     required
+                    autoComplete="current-password"
                     className="w-full px-3.5 py-2.5 pr-10 bg-slate-950 border border-slate-700 rounded-xl text-sm focus:outline-hidden focus:ring-2 focus:ring-indigo-500 text-white placeholder-slate-500 font-medium"
                   />
                   <button
@@ -251,55 +200,36 @@ export const LoginPage: React.FC<LoginPageProps> = ({
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full mt-3 py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/25 transition-all disabled:opacity-50"
+              className="w-full mt-3 py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/25 transition-all disabled:opacity-50 cursor-pointer"
             >
               {isSubmitting ? (
-                <span>Connecting to Firebase...</span>
+                <span>Authenticating with Firebase...</span>
               ) : isForgotMode ? (
                 <>
                   <Send className="w-4 h-4" />
-                  <span>Send Password Reset Email</span>
-                </>
-              ) : isRegisterMode ? (
-                <>
-                  <UserPlus className="w-4 h-4" />
-                  <span>Create Firebase Account</span>
+                  <span>Send Password Reset Link</span>
                 </>
               ) : (
                 <>
                   <LogIn className="w-4 h-4" />
-                  <span>Sign In to Life style</span>
+                  <span>Sign In</span>
                   <ArrowRight className="w-4 h-4" />
                 </>
               )}
             </button>
 
-            {/* Secondary navigation toggles */}
-            <div className="text-center pt-2 space-y-1.5">
-              {isForgotMode ? (
+            {/* Back to Sign In button when in Forgot Password mode */}
+            {isForgotMode && (
+              <div className="text-center pt-2">
                 <button
                   type="button"
                   onClick={() => { setIsForgotMode(false); setErrorMsg(''); setInfoMsg(''); }}
-                  className="text-xs text-indigo-400 hover:text-indigo-300 hover:underline font-semibold"
+                  className="text-xs text-indigo-400 hover:text-indigo-300 hover:underline font-semibold cursor-pointer"
                 >
                   ← Back to Sign In
                 </button>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => { 
-                    setIsRegisterMode(!isRegisterMode); 
-                    setErrorMsg(''); 
-                    setInfoMsg(''); 
-                  }}
-                  className="text-xs text-indigo-400 hover:text-indigo-300 hover:underline font-semibold"
-                >
-                  {isRegisterMode 
-                    ? 'Already have an account? Sign In' 
-                    : "New here? Create a Firebase account"}
-                </button>
-              )}
-            </div>
+              </div>
+            )}
 
           </form>
 

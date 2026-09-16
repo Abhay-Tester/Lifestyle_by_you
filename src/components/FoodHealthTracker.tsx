@@ -156,20 +156,20 @@ export const FoodHealthTracker: React.FC<FoodHealthTrackerProps> = ({
                 />
               </div>
 
-              <div className="flex items-center justify-between pt-1">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
                 <label className="flex items-center gap-2 cursor-pointer text-slate-700">
                   <input
                     type="checkbox"
                     checked={fiberRich}
                     onChange={(e) => setFiberRich(e.target.checked)}
-                    className="w-4 h-4 rounded bg-white border-slate-300 text-emerald-600 focus:ring-emerald-500"
+                    className="w-4 h-4 rounded bg-white border-slate-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer"
                   />
                   <span>High Fiber / Probiotic Rich (Good for gut microbiome)</span>
                 </label>
 
                 <button
                   type="submit"
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 shadow-sm transition-all"
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-4 py-2 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-sm transition-all cursor-pointer w-full sm:w-auto"
                 >
                   <Plus className="w-4 h-4" />
                   Save Meal

@@ -1,13 +1,13 @@
 import { 
   collection, 
   doc, 
-  getDoc,
+  getDoc, 
   getDocs, 
   setDoc, 
   deleteDoc, 
   writeBatch 
 } from 'firebase/firestore';
-import { db, getOrCreateClientUserId } from './firebase';
+import { db, getCurrentUserId } from './firebase';
 import { 
   Task, 
   DailyLog, 
@@ -16,8 +16,9 @@ import {
   MealLog, 
   Goal, 
   PurchaseItem, 
-  HabitChallenge,
-  UserProfile
+  HabitChallenge, 
+  EmergencyNote,
+  UserProfile 
 } from '../types';
 
 export interface CloudUserData {
@@ -29,14 +30,32 @@ export interface CloudUserData {
   goals: Goal[];
   purchases: PurchaseItem[];
   habitChallenges: HabitChallenge[];
+  emergencyNotes?: EmergencyNote[];
   profile?: UserProfile;
 }
 
 /**
- * Fetch all data for the user from Cloud Firestore
+ * Fetch all personal data for the given user from Cloud Firestore.
+ * Strictly scopes to `users/{userId}/...` so each user only sees their own data.
  */
-export async function fetchUserCloudData(): Promise<{ data: CloudUserData; hasData: boolean }> {
-  const userId = getOrCreateClientUserId();
+export async function fetchUserCloudData(explicitUserId?: string): Promise<{ data: CloudUserData; hasData: boolean }> {
+  const userId = explicitUserId || getCurrentUserId();
+  if (!userId) {
+    return {
+      hasData: false,
+      data: {
+        tasks: [],
+        dailyLogs: {},
+        studySessions: [],
+        exerciseLogs: [],
+        mealLogs: [],
+        goals: [],
+        purchases: [],
+        habitChallenges: [],
+        emergencyNotes: [],
+      }
+    };
+  }
 
   const userDocRef = doc(db, 'users', userId);
   const tasksCol = collection(db, 'users', userId, 'tasks');
@@ -47,6 +66,7 @@ export async function fetchUserCloudData(): Promise<{ data: CloudUserData; hasDa
   const goalsCol = collection(db, 'users', userId, 'goals');
   const purchasesCol = collection(db, 'users', userId, 'purchases');
   const challengesCol = collection(db, 'users', userId, 'habitChallenges');
+  const emergencyNotesCol = collection(db, 'users', userId, 'emergencyNotes');
 
   const [
     userDocSnap,
@@ -58,6 +78,7 @@ export async function fetchUserCloudData(): Promise<{ data: CloudUserData; hasDa
     goalsSnap,
     purchasesSnap,
     challengesSnap,
+    notesSnap,
   ] = await Promise.all([
     getDoc(userDocRef),
     getDocs(tasksCol),
@@ -68,6 +89,7 @@ export async function fetchUserCloudData(): Promise<{ data: CloudUserData; hasDa
     getDocs(goalsCol),
     getDocs(purchasesCol),
     getDocs(challengesCol),
+    getDocs(emergencyNotesCol),
   ]);
 
   const profile = userDocSnap.exists() ? (userDocSnap.data()?.profile as UserProfile | undefined) : undefined;
@@ -99,6 +121,9 @@ export async function fetchUserCloudData(): Promise<{ data: CloudUserData; hasDa
   const habitChallenges: HabitChallenge[] = [];
   challengesSnap.forEach((d) => habitChallenges.push({ ...(d.data() as HabitChallenge), id: d.id }));
 
+  const emergencyNotes: EmergencyNote[] = [];
+  notesSnap.forEach((d) => emergencyNotes.push({ ...(d.data() as EmergencyNote), id: d.id }));
+
   const hasData = 
     !!profile ||
     tasks.length > 0 ||
@@ -108,7 +133,8 @@ export async function fetchUserCloudData(): Promise<{ data: CloudUserData; hasDa
     mealLogs.length > 0 ||
     goals.length > 0 ||
     purchases.length > 0 ||
-    habitChallenges.length > 0;
+    habitChallenges.length > 0 ||
+    emergencyNotes.length > 0;
 
   return {
     hasData,
@@ -121,22 +147,26 @@ export async function fetchUserCloudData(): Promise<{ data: CloudUserData; hasDa
       goals,
       purchases,
       habitChallenges,
+      emergencyNotes,
       profile,
     },
   };
 }
 
 /**
- * Backup / Sync all current local state to Firestore for persistent cloud storage
+ * Backup / Sync user's state to Firestore under `users/{userId}`.
+ * Strictly isolates writes so users never overwrite another user's personal documents.
  */
-export async function saveAllUserDataToCloud(data: CloudUserData): Promise<void> {
-  const userId = getOrCreateClientUserId();
+export async function saveAllUserDataToCloud(data: CloudUserData, explicitUserId?: string): Promise<void> {
+  const userId = explicitUserId || getCurrentUserId();
+  if (!userId) return;
 
   // Update user profile document timestamp & profile details
   await setDoc(
     doc(db, 'users', userId),
     {
       profile: data.profile,
+      userId,
       lastSyncedAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     },
@@ -223,14 +253,25 @@ export async function saveAllUserDataToCloud(data: CloudUserData): Promise<void>
     }
     await hcBatch.commit();
   }
+
+  // Sync Emergency Notes
+  if (data.emergencyNotes && data.emergencyNotes.length > 0) {
+    const notesBatch = writeBatch(db);
+    for (const note of data.emergencyNotes) {
+      const noteRef = doc(db, 'users', userId, 'emergencyNotes', note.id);
+      notesBatch.set(noteRef, { ...note, userId });
+    }
+    await notesBatch.commit();
+  }
 }
 
 /**
  * Remove an item from a user's subcollection in Firestore
  */
-export async function deleteCloudItem(collectionName: string, docId: string): Promise<void> {
+export async function deleteCloudItem(collectionName: string, docId: string, explicitUserId?: string): Promise<void> {
   try {
-    const userId = getOrCreateClientUserId();
+    const userId = explicitUserId || getCurrentUserId();
+    if (!userId) return;
     const docRef = doc(db, 'users', userId, collectionName, docId);
     await deleteDoc(docRef);
   } catch (err) {

@@ -22,16 +22,12 @@ interface ProfileSectionProps {
   userProfile: UserProfile;
   onUpdateProfile: (updated: Partial<UserProfile>) => void;
   onLogout: () => void;
-  cloudSyncStatus: 'synced' | 'syncing' | 'offline';
-  onManualCloudSync: () => void;
 }
 
 export const ProfileSection: React.FC<ProfileSectionProps> = ({
   userProfile,
   onUpdateProfile,
   onLogout,
-  cloudSyncStatus,
-  onManualCloudSync,
 }) => {
   const [formData, setFormData] = useState<UserProfile>(userProfile);
   const [isSaved, setIsSaved] = useState(false);
@@ -84,19 +80,15 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            <button
-              onClick={onManualCloudSync}
-              className="px-3 py-2 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-xs font-semibold text-slate-200 border border-slate-700 flex items-center gap-2 transition-colors"
-              title="Force sync data with Firestore"
-            >
-              <RefreshCw className={`w-3.5 h-3.5 ${cloudSyncStatus === 'syncing' ? 'animate-spin text-indigo-400' : 'text-emerald-400'}`} />
-              <span>{cloudSyncStatus === 'syncing' ? 'Syncing...' : 'Sync Firestore'}</span>
-            </button>
+          <div className="flex items-center gap-2.5">
+            <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800/80 text-[11px] font-medium text-emerald-300 border border-slate-700/60">
+              <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+              <span>Real-time Auto Saved</span>
+            </div>
 
             <button
               onClick={onLogout}
-              className="px-3.5 py-2 rounded-xl bg-red-600/20 hover:bg-red-600/30 text-red-300 text-xs font-semibold border border-red-500/30 flex items-center gap-2 transition-colors"
+              className="px-3.5 py-2 rounded-xl bg-red-600/20 hover:bg-red-600/30 text-red-300 text-xs font-semibold border border-red-500/30 flex items-center gap-2 transition-colors cursor-pointer"
             >
               <LogOut className="w-3.5 h-3.5" />
               <span>Sign Out</span>
@@ -107,11 +99,11 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({
       </div>
 
       {/* Main Profile Form Card */}
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-6 sm:p-8">
+      <div className="bg-white border border-slate-200 rounded-2xl shadow-sm p-4 sm:p-8">
         
-        <div className="flex items-center justify-between pb-6 border-b border-slate-100">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-6 border-b border-slate-100">
           <div>
-            <h2 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+            <h2 className="text-base sm:text-lg font-bold text-slate-900 flex items-center gap-2">
               <User className="w-5 h-5 text-indigo-600" />
               Account & Personal Information
             </h2>
@@ -121,9 +113,9 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({
           </div>
 
           {isSaved && (
-            <div className="flex items-center gap-1.5 text-xs text-emerald-600 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-lg font-bold animate-in fade-in">
+            <div className="flex items-center gap-1.5 text-xs text-emerald-600 bg-emerald-50 border border-emerald-200 px-3 py-1.5 rounded-lg font-bold animate-in fade-in self-start sm:self-auto">
               <Check className="w-4 h-4" />
-              Changes Saved & Synced!
+              Changes Saved in Real Time!
             </div>
           )}
         </div>
@@ -257,15 +249,15 @@ export const ProfileSection: React.FC<ProfileSectionProps> = ({
           </div>
 
           {/* Save Action Button */}
-          <div className="pt-2 flex items-center justify-between border-t border-slate-100">
+          <div className="pt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-slate-100">
             <div className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
-              <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
-              Changes will sync automatically to Firestore.
+              <Sparkles className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+              <span>All updates automatically saved to your account.</span>
             </div>
 
             <button
               type="submit"
-              className="px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm flex items-center gap-2 shadow-sm transition-all"
+              className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer"
             >
               <Save className="w-4 h-4" />
               <span>Save Profile Changes</span>

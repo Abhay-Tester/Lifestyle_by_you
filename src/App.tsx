@@ -7,10 +7,11 @@ import {
   MealLog, 
   Goal, 
   PurchaseItem, 
-  HabitChallenge,
-  LadderStage,
-  ActiveTab,
-  UserProfile
+  HabitChallenge, 
+  LadderStage, 
+  ActiveTab, 
+  UserProfile,
+  EmergencyNote
 } from './types';
 import { 
   loadStoredData, 
@@ -22,9 +23,11 @@ import {
   defaultExerciseLogs, 
   defaultMealLogs, 
   defaultGoals, 
-  defaultPurchases,
-  defaultHabitChallenges,
-  defaultUserProfile
+  defaultPurchases, 
+  defaultHabitChallenges, 
+  defaultEmergencyNotes,
+  defaultUserProfile,
+  createDefaultUserProfile
 } from './utils/storage';
 import { getTodayDateString, shiftDate } from './utils/date';
 import { 
@@ -32,8 +35,9 @@ import {
   saveAllUserDataToCloud, 
   deleteCloudItem 
 } from './lib/firestoreService';
-import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { onAuthStateChanged, signOut, User as FirebaseUser } from 'firebase/auth';
 import { auth } from './lib/firebase';
+import { FileText, ShieldAlert } from 'lucide-react';
 
 import { Header } from './components/Header';
 import { Navigation } from './components/Navigation';
@@ -48,45 +52,72 @@ import { HabitMatrixSheet } from './components/HabitMatrixSheet';
 import { QuickAddModal } from './components/QuickAddModal';
 import { ProfileSection } from './components/ProfileSection';
 import { LoginPage } from './components/LoginPage';
+import { EmergencyNotesSection } from './components/EmergencyNotesSection';
+import { EmergencyQuickModal } from './components/EmergencyQuickModal';
 
 export default function App() {
   const today = getTodayDateString();
   const [selectedDate, setSelectedDate] = useState<string>(today);
   const [activeTab, setActiveTab] = useState<ActiveTab>('habit_matrix');
   const [isQuickAddOpen, setIsQuickAddOpen] = useState<boolean>(false);
+  const [isEmergencyModalOpen, setIsEmergencyModalOpen] = useState<boolean>(false);
   const [cloudSyncStatus, setCloudSyncStatus] = useState<'synced' | 'syncing' | 'offline'>('synced');
+  const [isInitialLoading, setIsInitialLoading] = useState<boolean>(true);
   const isInitialCloudLoadDone = useRef(false);
 
-  // Authentication State
-  // Initial check: if already stored in session or user is on /home
+  // Auth User State
+  const [currentFirebaseUser, setCurrentFirebaseUser] = useState<FirebaseUser | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
-    // Check path or stored session
-    if (typeof window !== 'undefined') {
-      const isHomePath = window.location.pathname.startsWith('/home') || window.location.hash.includes('home');
-      const savedAuth = loadStoredData<boolean>(STORAGE_KEYS.AUTH_SESSION, false);
-      return isHomePath || savedAuth;
-    }
-    return false;
+    // Check if previously logged in
+    const session = loadStoredData<boolean>(STORAGE_KEYS.AUTH_SESSION, false);
+    return session || !!auth.currentUser;
   });
 
-  // User Profile State
+  const currentUserId = currentFirebaseUser?.uid;
+
+  // Primary User Isolated Lifestyle State
   const [userProfile, setUserProfile] = useState<UserProfile>(() => 
-    loadStoredData(STORAGE_KEYS.USER_PROFILE, defaultUserProfile)
+    loadStoredData(STORAGE_KEYS.USER_PROFILE, defaultUserProfile, currentUserId)
+  );
+  const [tasks, setTasks] = useState<Task[]>(() => 
+    loadStoredData(STORAGE_KEYS.TASKS, defaultTasks, currentUserId)
+  );
+  const [dailyLogs, setDailyLogs] = useState<Record<string, DailyLog>>(() => 
+    loadStoredData(STORAGE_KEYS.DAILY_LOGS, defaultDailyLogs, currentUserId)
+  );
+  const [studySessions, setStudySessions] = useState<StudySession[]>(() => 
+    loadStoredData(STORAGE_KEYS.STUDY_SESSIONS, defaultStudySessions, currentUserId)
+  );
+  const [exerciseLogs, setExerciseLogs] = useState<ExerciseLog[]>(() => 
+    loadStoredData(STORAGE_KEYS.EXERCISE_LOGS, defaultExerciseLogs, currentUserId)
+  );
+  const [mealLogs, setMealLogs] = useState<MealLog[]>(() => 
+    loadStoredData(STORAGE_KEYS.MEAL_LOGS, defaultMealLogs, currentUserId)
+  );
+  const [goals, setGoals] = useState<Goal[]>(() => 
+    loadStoredData(STORAGE_KEYS.GOALS, defaultGoals, currentUserId)
+  );
+  const [purchases, setPurchases] = useState<PurchaseItem[]>(() => 
+    loadStoredData(STORAGE_KEYS.PURCHASES, defaultPurchases, currentUserId)
+  );
+  const [habitChallenges, setHabitChallenges] = useState<HabitChallenge[]>(() => 
+    loadStoredData(STORAGE_KEYS.HABIT_CHALLENGES, defaultHabitChallenges, currentUserId)
+  );
+  const [emergencyNotes, setEmergencyNotes] = useState<EmergencyNote[]>(() => 
+    loadStoredData(STORAGE_KEYS.EMERGENCY_NOTES, defaultEmergencyNotes, currentUserId)
   );
 
-  // Listen to Firebase Auth state
+  /**
+   * Listen to Firebase Auth state.
+   * When auth state changes or a different user logs in, reload and isolate that specific user's data.
+   */
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
+        setCurrentFirebaseUser(user);
         setIsAuthenticated(true);
         saveStoredData(STORAGE_KEYS.AUTH_SESSION, true);
-        if (user.email && user.email !== userProfile.email) {
-          setUserProfile((prev) => ({
-            ...prev,
-            email: user.email || prev.email,
-            name: user.displayName || prev.name,
-          }));
-        }
+
         // Update URL path to /home if not already there
         if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/home')) {
           try {
@@ -95,80 +126,146 @@ export default function App() {
             // fallback
           }
         }
+
+        // Fetch this user's isolated data from Cloud Firestore
+        setCloudSyncStatus('syncing');
+        try {
+          const { data, hasData } = await fetchUserCloudData(user.uid);
+          if (hasData) {
+            // Cloud has data for this specific user - load it
+            const profile = data.profile || createDefaultUserProfile(user.displayName || user.email?.split('@')[0] || 'My Profile', user.email || '');
+            setUserProfile(profile);
+            setTasks(data.tasks || []);
+            setDailyLogs(data.dailyLogs || {});
+            setStudySessions(data.studySessions || []);
+            setExerciseLogs(data.exerciseLogs || []);
+            setMealLogs(data.mealLogs || []);
+            setGoals(data.goals || []);
+            setPurchases(data.purchases || []);
+            setHabitChallenges(data.habitChallenges || []);
+            setEmergencyNotes(data.emergencyNotes || []);
+
+            // Also mirror to user-scoped local storage
+            saveStoredData(STORAGE_KEYS.USER_PROFILE, profile, user.uid);
+            saveStoredData(STORAGE_KEYS.TASKS, data.tasks || [], user.uid);
+            saveStoredData(STORAGE_KEYS.DAILY_LOGS, data.dailyLogs || {}, user.uid);
+            saveStoredData(STORAGE_KEYS.STUDY_SESSIONS, data.studySessions || [], user.uid);
+            saveStoredData(STORAGE_KEYS.EXERCISE_LOGS, data.exerciseLogs || [], user.uid);
+            saveStoredData(STORAGE_KEYS.MEAL_LOGS, data.mealLogs || [], user.uid);
+            saveStoredData(STORAGE_KEYS.GOALS, data.goals || [], user.uid);
+            saveStoredData(STORAGE_KEYS.PURCHASES, data.purchases || [], user.uid);
+            saveStoredData(STORAGE_KEYS.HABIT_CHALLENGES, data.habitChallenges || [], user.uid);
+            saveStoredData(STORAGE_KEYS.EMERGENCY_NOTES, data.emergencyNotes || [], user.uid);
+          } else {
+            // New user without cloud records yet: load their user-scoped local storage or fresh templates
+            const userCachedProfile = loadStoredData<UserProfile | null>(STORAGE_KEYS.USER_PROFILE, null, user.uid);
+            const initialProfile = userCachedProfile || createDefaultUserProfile(
+              user.displayName || (user.email ? user.email.split('@')[0] : 'My Profile'),
+              user.email || ''
+            );
+            const initialTasks = loadStoredData(STORAGE_KEYS.TASKS, defaultTasks, user.uid);
+            const initialDailyLogs = loadStoredData(STORAGE_KEYS.DAILY_LOGS, defaultDailyLogs, user.uid);
+            const initialStudy = loadStoredData(STORAGE_KEYS.STUDY_SESSIONS, defaultStudySessions, user.uid);
+            const initialExercise = loadStoredData(STORAGE_KEYS.EXERCISE_LOGS, defaultExerciseLogs, user.uid);
+            const initialMeal = loadStoredData(STORAGE_KEYS.MEAL_LOGS, defaultMealLogs, user.uid);
+            const initialGoals = loadStoredData(STORAGE_KEYS.GOALS, defaultGoals, user.uid);
+            const initialPurchases = loadStoredData(STORAGE_KEYS.PURCHASES, defaultPurchases, user.uid);
+            const initialChallenges = loadStoredData(STORAGE_KEYS.HABIT_CHALLENGES, defaultHabitChallenges, user.uid);
+            const initialNotes = loadStoredData(STORAGE_KEYS.EMERGENCY_NOTES, defaultEmergencyNotes, user.uid);
+
+            setUserProfile(initialProfile);
+            setTasks(initialTasks);
+            setDailyLogs(initialDailyLogs);
+            setStudySessions(initialStudy);
+            setExerciseLogs(initialExercise);
+            setMealLogs(initialMeal);
+            setGoals(initialGoals);
+            setPurchases(initialPurchases);
+            setHabitChallenges(initialChallenges);
+            setEmergencyNotes(initialNotes);
+
+            // Seed user's private Firestore document
+            await saveAllUserDataToCloud({
+              tasks: initialTasks,
+              dailyLogs: initialDailyLogs,
+              studySessions: initialStudy,
+              exerciseLogs: initialExercise,
+              mealLogs: initialMeal,
+              goals: initialGoals,
+              purchases: initialPurchases,
+              habitChallenges: initialChallenges,
+              emergencyNotes: initialNotes,
+              profile: initialProfile,
+            }, user.uid);
+          }
+          setCloudSyncStatus('synced');
+        } catch (err) {
+          console.warn('Firebase user sync status: using local cache', err);
+          setCloudSyncStatus('offline');
+        } finally {
+          isInitialCloudLoadDone.current = true;
+          setIsInitialLoading(false);
+        }
+      } else {
+        // Logged out
+        setCurrentFirebaseUser(null);
+        setIsAuthenticated(false);
+        saveStoredData(STORAGE_KEYS.AUTH_SESSION, false);
+        setIsInitialLoading(false);
       }
     });
 
     return () => unsubscribe();
-  }, [userProfile.email]);
-
-  // Main Persistent States
-  const [tasks, setTasks] = useState<Task[]>(() => loadStoredData(STORAGE_KEYS.TASKS, defaultTasks));
-  const [dailyLogs, setDailyLogs] = useState<Record<string, DailyLog>>(() => loadStoredData(STORAGE_KEYS.DAILY_LOGS, defaultDailyLogs));
-  const [studySessions, setStudySessions] = useState<StudySession[]>(() => loadStoredData(STORAGE_KEYS.STUDY_SESSIONS, defaultStudySessions));
-  const [exerciseLogs, setExerciseLogs] = useState<ExerciseLog[]>(() => loadStoredData(STORAGE_KEYS.EXERCISE_LOGS, defaultExerciseLogs));
-  const [mealLogs, setMealLogs] = useState<MealLog[]>(() => loadStoredData(STORAGE_KEYS.MEAL_LOGS, defaultMealLogs));
-  const [goals, setGoals] = useState<Goal[]>(() => loadStoredData(STORAGE_KEYS.GOALS, defaultGoals));
-  const [purchases, setPurchases] = useState<PurchaseItem[]>(() => loadStoredData(STORAGE_KEYS.PURCHASES, defaultPurchases));
-  const [habitChallenges, setHabitChallenges] = useState<HabitChallenge[]>(() => loadStoredData(STORAGE_KEYS.HABIT_CHALLENGES, defaultHabitChallenges));
-
-  // Save changes to LocalStorage on state updates
-  useEffect(() => { saveStoredData(STORAGE_KEYS.AUTH_SESSION, isAuthenticated); }, [isAuthenticated]);
-  useEffect(() => { saveStoredData(STORAGE_KEYS.USER_PROFILE, userProfile); }, [userProfile]);
-  useEffect(() => { saveStoredData(STORAGE_KEYS.TASKS, tasks); }, [tasks]);
-  useEffect(() => { saveStoredData(STORAGE_KEYS.DAILY_LOGS, dailyLogs); }, [dailyLogs]);
-  useEffect(() => { saveStoredData(STORAGE_KEYS.STUDY_SESSIONS, studySessions); }, [studySessions]);
-  useEffect(() => { saveStoredData(STORAGE_KEYS.EXERCISE_LOGS, exerciseLogs); }, [exerciseLogs]);
-  useEffect(() => { saveStoredData(STORAGE_KEYS.MEAL_LOGS, mealLogs); }, [mealLogs]);
-  useEffect(() => { saveStoredData(STORAGE_KEYS.GOALS, goals); }, [goals]);
-  useEffect(() => { saveStoredData(STORAGE_KEYS.PURCHASES, purchases); }, [purchases]);
-  useEffect(() => { saveStoredData(STORAGE_KEYS.HABIT_CHALLENGES, habitChallenges); }, [habitChallenges]);
-
-  // Initial cloud sync on startup
-  useEffect(() => {
-    async function loadCloudData() {
-      try {
-        setCloudSyncStatus('syncing');
-        const { data, hasData } = await fetchUserCloudData();
-        if (hasData) {
-          // Cloud has existing data - apply to local state
-          if (data.profile) setUserProfile(data.profile);
-          if (data.tasks && data.tasks.length > 0) setTasks(data.tasks);
-          if (data.dailyLogs && Object.keys(data.dailyLogs).length > 0) setDailyLogs(data.dailyLogs);
-          if (data.studySessions && data.studySessions.length > 0) setStudySessions(data.studySessions);
-          if (data.exerciseLogs && data.exerciseLogs.length > 0) setExerciseLogs(data.exerciseLogs);
-          if (data.mealLogs && data.mealLogs.length > 0) setMealLogs(data.mealLogs);
-          if (data.goals && data.goals.length > 0) setGoals(data.goals);
-          if (data.purchases && data.purchases.length > 0) setPurchases(data.purchases);
-          if (data.habitChallenges && data.habitChallenges.length > 0) setHabitChallenges(data.habitChallenges);
-        } else {
-          // First time cloud connection: seed current local state to cloud
-          await saveAllUserDataToCloud({
-            tasks,
-            dailyLogs,
-            studySessions,
-            exerciseLogs,
-            mealLogs,
-            goals,
-            purchases,
-            habitChallenges,
-            profile: userProfile,
-          });
-        }
-        setCloudSyncStatus('synced');
-      } catch (err) {
-        console.warn('Firebase sync status: using local cache', err);
-        setCloudSyncStatus('offline');
-      } finally {
-        isInitialCloudLoadDone.current = true;
-      }
-    }
-
-    loadCloudData();
   }, []);
 
-  // Debounced auto-sync to Firestore on modifications
+  // Save changes to user-scoped LocalStorage on state updates
+  useEffect(() => { 
+    saveStoredData(STORAGE_KEYS.AUTH_SESSION, isAuthenticated); 
+  }, [isAuthenticated]);
+
+  useEffect(() => { 
+    if (currentUserId) saveStoredData(STORAGE_KEYS.USER_PROFILE, userProfile, currentUserId); 
+  }, [userProfile, currentUserId]);
+
+  useEffect(() => { 
+    if (currentUserId) saveStoredData(STORAGE_KEYS.TASKS, tasks, currentUserId); 
+  }, [tasks, currentUserId]);
+
+  useEffect(() => { 
+    if (currentUserId) saveStoredData(STORAGE_KEYS.DAILY_LOGS, dailyLogs, currentUserId); 
+  }, [dailyLogs, currentUserId]);
+
+  useEffect(() => { 
+    if (currentUserId) saveStoredData(STORAGE_KEYS.STUDY_SESSIONS, studySessions, currentUserId); 
+  }, [studySessions, currentUserId]);
+
+  useEffect(() => { 
+    if (currentUserId) saveStoredData(STORAGE_KEYS.EXERCISE_LOGS, exerciseLogs, currentUserId); 
+  }, [exerciseLogs, currentUserId]);
+
+  useEffect(() => { 
+    if (currentUserId) saveStoredData(STORAGE_KEYS.MEAL_LOGS, mealLogs, currentUserId); 
+  }, [mealLogs, currentUserId]);
+
+  useEffect(() => { 
+    if (currentUserId) saveStoredData(STORAGE_KEYS.GOALS, goals, currentUserId); 
+  }, [goals, currentUserId]);
+
+  useEffect(() => { 
+    if (currentUserId) saveStoredData(STORAGE_KEYS.PURCHASES, purchases, currentUserId); 
+  }, [purchases, currentUserId]);
+
+  useEffect(() => { 
+    if (currentUserId) saveStoredData(STORAGE_KEYS.HABIT_CHALLENGES, habitChallenges, currentUserId); 
+  }, [habitChallenges, currentUserId]);
+
+  useEffect(() => { 
+    if (currentUserId) saveStoredData(STORAGE_KEYS.EMERGENCY_NOTES, emergencyNotes, currentUserId); 
+  }, [emergencyNotes, currentUserId]);
+
+  // Debounced auto-sync to Firestore for the currently active user
   useEffect(() => {
-    if (!isInitialCloudLoadDone.current) return;
+    if (!isInitialCloudLoadDone.current || !currentUserId) return;
 
     const timeout = setTimeout(async () => {
       try {
@@ -182,8 +279,9 @@ export default function App() {
           goals,
           purchases,
           habitChallenges,
+          emergencyNotes,
           profile: userProfile,
-        });
+        }, currentUserId);
         setCloudSyncStatus('synced');
       } catch (err) {
         console.error('Auto sync to Firestore failed:', err);
@@ -192,11 +290,44 @@ export default function App() {
     }, 1200);
 
     return () => clearTimeout(timeout);
-  }, [tasks, dailyLogs, studySessions, exerciseLogs, mealLogs, goals, purchases, habitChallenges, userProfile]);
+  }, [tasks, dailyLogs, studySessions, exerciseLogs, mealLogs, goals, purchases, habitChallenges, emergencyNotes, userProfile, currentUserId]);
 
-  const handleManualCloudSync = async () => {
+  // Logout Handler
+  const handleLogout = async () => {
     try {
-      setCloudSyncStatus('syncing');
+      await signOut(auth);
+      saveStoredData(STORAGE_KEYS.AUTH_SESSION, false);
+      setIsAuthenticated(false);
+      setCurrentFirebaseUser(null);
+      if (typeof window !== 'undefined') {
+        window.history.pushState(null, '', '/');
+      }
+    } catch (err) {
+      console.error('Logout error:', err);
+    }
+  };
+
+  // Login Handler from LoginPage
+  const handleSuccessLogin = (profile: UserProfile, fbUser?: FirebaseUser) => {
+    if (fbUser) {
+      setCurrentFirebaseUser(fbUser);
+    }
+    setUserProfile(profile);
+    setIsAuthenticated(true);
+    saveStoredData(STORAGE_KEYS.AUTH_SESSION, true);
+    if (typeof window !== 'undefined') {
+      window.history.pushState(null, '', '/home');
+    }
+  };
+
+  // Manual Firestore sync trigger
+  const handleManualCloudSync = async () => {
+    if (!currentUserId) {
+      alert('You are currently working in local-first mode. Sign in to cloud sync across devices.');
+      return;
+    }
+    setCloudSyncStatus('syncing');
+    try {
       await saveAllUserDataToCloud({
         tasks,
         dailyLogs,
@@ -206,123 +337,49 @@ export default function App() {
         goals,
         purchases,
         habitChallenges,
+        emergencyNotes,
         profile: userProfile,
-      });
+      }, currentUserId);
       setCloudSyncStatus('synced');
+      alert('All your personal habits and emergency notes are securely synced to your cloud account!');
     } catch (err) {
       console.error('Manual Firestore sync error:', err);
       setCloudSyncStatus('offline');
+      alert('Cloud sync failed. Data is safely stored in your browser.');
     }
   };
 
+  // Profile Update Handler
   const handleUpdateProfile = (updated: Partial<UserProfile>) => {
-    setUserProfile((prev) => ({
-      ...prev,
-      ...updated,
-    }));
-  };
-
-  const handleSuccessLogin = (email?: string) => {
-    setIsAuthenticated(true);
-    saveStoredData(STORAGE_KEYS.AUTH_SESSION, true);
-    if (email) {
-      setUserProfile((prev) => ({ ...prev, email }));
-    }
-    // Update route to /home
-    try {
-      window.history.pushState(null, '', '/home');
-    } catch {
-      // ignore
-    }
-  };
-
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-    } catch {
-      // non-fatal
-    }
-    setIsAuthenticated(false);
-    saveStoredData(STORAGE_KEYS.AUTH_SESSION, false);
-    // Return route to /
-    try {
-      window.history.pushState(null, '', '/');
-    } catch {
-      // ignore
-    }
-  };
-
-  // Ensure selectedDate has a valid DailyLog object
-  const currentDailyLog: DailyLog = dailyLogs[selectedDate] || {
-    date: selectedDate,
-    targetWakeTime: '06:00',
-    actualWakeTime: '06:00',
-    targetSleepTime: '22:00',
-    actualSleepTime: '',
-    sleptEarly: true,
-    sleepQuality: 4,
-    mood: 4,
-    energyLevel: 4,
-    waterIntakeMl: 1500,
-    waterGoalMl: 3000,
-    digestionStatus: 'great',
-    gutComfortRating: 5,
-    digestionNotes: '',
-    notes: '',
-  };
-
-  const handleUpdateDailyLog = (date: string, partial: Partial<DailyLog>) => {
-    setDailyLogs((prev) => {
-      const existing = prev[date] || {
-        date,
-        targetWakeTime: '06:00',
-        actualWakeTime: '06:00',
-        targetSleepTime: '22:00',
-        actualSleepTime: '',
-        sleptEarly: true,
-        sleepQuality: 4,
-        mood: 4,
-        energyLevel: 4,
-        waterIntakeMl: 1500,
-        waterGoalMl: 3000,
-        digestionStatus: 'great',
-        gutComfortRating: 5,
-        digestionNotes: '',
-        notes: '',
-      };
-      return {
-        ...prev,
-        [date]: { ...existing, ...partial },
-      };
+    setUserProfile((prev) => {
+      const next = { ...prev, ...updated };
+      return next;
     });
   };
 
-  // Helper to calculate early sleep streak
-  const calculateEarlySleepStreak = (): number => {
-    let streak = 0;
-    let currDate = today;
-    for (let i = 0; i < 60; i++) {
-      const log = dailyLogs[currDate];
-      if (log && log.sleptEarly) {
-        streak++;
-        currDate = shiftDate(currDate, -1);
-      } else {
-        break;
-      }
-    }
-    return streak;
+  // Task Handlers
+  const handleAddTask = (taskData: Omit<Task, 'id' | 'completedDates' | 'createdAt'>) => {
+    const newTask: Task = {
+      ...taskData,
+      id: `t-${Date.now()}`,
+      completedDates: {},
+      createdAt: today,
+    };
+    setTasks((prev) => [newTask, ...prev]);
   };
 
-  const earlySleepStreak = calculateEarlySleepStreak();
-
-  // Task Handlers
   const handleToggleTask = (taskId: string, date: string) => {
     setTasks((prev) =>
       prev.map((t) => {
         if (t.id === taskId) {
-          const updatedDates = { ...t.completedDates };
-          updatedDates[date] = !updatedDates[date];
-          return { ...t, completedDates: updatedDates };
+          const isDone = !!t.completedDates[date];
+          const newDates = { ...t.completedDates };
+          if (isDone) {
+            delete newDates[date];
+          } else {
+            newDates[date] = true;
+          }
+          return { ...t, completedDates: newDates };
         }
         return t;
       })
@@ -337,37 +394,84 @@ export default function App() {
 
   const handleDeleteTask = (taskId: string) => {
     setTasks((prev) => prev.filter((t) => t.id !== taskId));
-    deleteCloudItem('tasks', taskId);
+    if (currentUserId) deleteCloudItem('tasks', taskId, currentUserId);
   };
 
-  const handleReorderTasks = (reorderedTasks: Task[]) => {
-    setTasks(reorderedTasks);
+  const handleReorderTasks = (reordered: Task[]) => {
+    setTasks(reordered);
   };
 
   const handleMoveTask = (taskId: string, direction: 'up' | 'down') => {
     setTasks((prev) => {
-      const index = prev.findIndex((t) => t.id === taskId);
-      if (index === -1) return prev;
-      const targetIndex = direction === 'up' ? index - 1 : index + 1;
-      if (targetIndex < 0 || targetIndex >= prev.length) return prev;
+      const idx = prev.findIndex((t) => t.id === taskId);
+      if (idx === -1) return prev;
+      if (direction === 'up' && idx === 0) return prev;
+      if (direction === 'down' && idx === prev.length - 1) return prev;
+
       const newTasks = [...prev];
-      const [movedTask] = newTasks.splice(index, 1);
-      newTasks.splice(targetIndex, 0, movedTask);
+      const targetIdx = direction === 'up' ? idx - 1 : idx + 1;
+      const temp = newTasks[idx];
+      newTasks[idx] = newTasks[targetIdx];
+      newTasks[targetIdx] = temp;
       return newTasks;
     });
   };
 
-  const handleAddTask = (taskData: Omit<Task, 'id' | 'completedDates' | 'createdAt'>) => {
-    const newTask: Task = {
-      ...taskData,
-      id: `t-${Date.now()}`,
-      completedDates: {},
-      createdAt: today,
-    };
-    setTasks((prev) => [newTask, ...prev]);
+  // Daily Log Handlers
+  const currentDailyLog: DailyLog = dailyLogs[selectedDate] || {
+    date: selectedDate,
+    targetWakeTime: '06:00',
+    actualWakeTime: '',
+    targetSleepTime: '22:00',
+    actualSleepTime: '',
+    sleptEarly: false,
+    sleepQuality: 4,
+    mood: 4,
+    energyLevel: 4,
+    waterIntakeMl: 0,
+    waterGoalMl: 3000,
+    digestionStatus: 'okay',
+    gutComfortRating: 4,
+    notes: '',
   };
 
-  // Study Handlers
+  const handleUpdateDailyLog = (updated: Partial<DailyLog>) => {
+    setDailyLogs((prev) => ({
+      ...prev,
+      [selectedDate]: {
+        ...currentDailyLog,
+        ...updated,
+        date: selectedDate,
+      },
+    }));
+  };
+
+  const handleAddWater = (amountMl: number) => {
+    const current = currentDailyLog.waterIntakeMl || 0;
+    handleUpdateDailyLog({ waterIntakeMl: Math.max(0, current + amountMl) });
+  };
+
+  // Calculate Early Sleep Streak
+  const earlySleepStreak = React.useMemo(() => {
+    let streak = 0;
+    let checkDate = today;
+    for (let i = 0; i < 60; i++) {
+      const log = dailyLogs[checkDate];
+      if (log && log.sleptEarly) {
+        streak++;
+        checkDate = shiftDate(checkDate, -1);
+      } else {
+        if (i === 0 && (!log || !log.actualSleepTime)) {
+          checkDate = shiftDate(checkDate, -1);
+          continue;
+        }
+        break;
+      }
+    }
+    return streak;
+  }, [dailyLogs, today]);
+
+  // Study Session Handlers
   const handleAddStudySession = (sessionData: Omit<StudySession, 'id'>) => {
     const newSession: StudySession = {
       ...sessionData,
@@ -426,14 +530,14 @@ export default function App() {
     setGoals((prev) =>
       prev.map((g) => {
         if (g.id === goalId) {
-          const updatedMilestones = g.milestones.map((m) =>
+          const milestones = g.milestones.map((m) =>
             m.id === milestoneId ? { ...m, completed: !m.completed } : m
           );
-          const completedCount = updatedMilestones.filter((m) => m.completed).length;
-          const progress = Math.round((completedCount / (updatedMilestones.length || 1)) * 100);
+          const completedCount = milestones.filter((m) => m.completed).length;
+          const progress = Math.round((completedCount / milestones.length) * 100);
           return {
             ...g,
-            milestones: updatedMilestones,
+            milestones,
             progress,
             status: progress === 100 ? 'completed' : 'in_progress',
           };
@@ -445,7 +549,7 @@ export default function App() {
 
   const handleDeleteGoal = (goalId: string) => {
     setGoals((prev) => prev.filter((g) => g.id !== goalId));
-    deleteCloudItem('goals', goalId);
+    if (currentUserId) deleteCloudItem('goals', goalId, currentUserId);
   };
 
   // Purchase Handlers
@@ -466,7 +570,34 @@ export default function App() {
 
   const handleDeletePurchase = (id: string) => {
     setPurchases((prev) => prev.filter((p) => p.id !== id));
-    deleteCloudItem('purchases', id);
+    if (currentUserId) deleteCloudItem('purchases', id, currentUserId);
+  };
+
+  // Emergency Notes Handlers
+  const handleAddEmergencyNote = (noteData: Omit<EmergencyNote, 'id' | 'createdAt'>) => {
+    const newNote: EmergencyNote = {
+      ...noteData,
+      id: `en-${Date.now()}`,
+      createdAt: today,
+    };
+    setEmergencyNotes((prev) => [newNote, ...prev]);
+  };
+
+  const handleUpdateEmergencyNote = (id: string, partial: Partial<EmergencyNote>) => {
+    setEmergencyNotes((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, ...partial } : n))
+    );
+  };
+
+  const handleDeleteEmergencyNote = (id: string) => {
+    setEmergencyNotes((prev) => prev.filter((n) => n.id !== id));
+    if (currentUserId) deleteCloudItem('emergencyNotes', id, currentUserId);
+  };
+
+  const handleToggleEmergencyNoteComplete = (id: string) => {
+    setEmergencyNotes((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, isCompleted: !n.isCompleted } : n))
+    );
   };
 
   // Habit Challenge Handlers
@@ -530,15 +661,16 @@ export default function App() {
   };
 
   const handleDataRefresh = () => {
-    setTasks(loadStoredData(STORAGE_KEYS.TASKS, defaultTasks));
-    setDailyLogs(loadStoredData(STORAGE_KEYS.DAILY_LOGS, defaultDailyLogs));
-    setStudySessions(loadStoredData(STORAGE_KEYS.STUDY_SESSIONS, defaultStudySessions));
-    setExerciseLogs(loadStoredData(STORAGE_KEYS.EXERCISE_LOGS, defaultExerciseLogs));
-    setMealLogs(loadStoredData(STORAGE_KEYS.MEAL_LOGS, defaultMealLogs));
-    setGoals(loadStoredData(STORAGE_KEYS.GOALS, defaultGoals));
-    setPurchases(loadStoredData(STORAGE_KEYS.PURCHASES, defaultPurchases));
-    setHabitChallenges(loadStoredData(STORAGE_KEYS.HABIT_CHALLENGES, defaultHabitChallenges));
-    setUserProfile(loadStoredData(STORAGE_KEYS.USER_PROFILE, defaultUserProfile));
+    setTasks(loadStoredData(STORAGE_KEYS.TASKS, defaultTasks, currentUserId));
+    setDailyLogs(loadStoredData(STORAGE_KEYS.DAILY_LOGS, defaultDailyLogs, currentUserId));
+    setStudySessions(loadStoredData(STORAGE_KEYS.STUDY_SESSIONS, defaultStudySessions, currentUserId));
+    setExerciseLogs(loadStoredData(STORAGE_KEYS.EXERCISE_LOGS, defaultExerciseLogs, currentUserId));
+    setMealLogs(loadStoredData(STORAGE_KEYS.MEAL_LOGS, defaultMealLogs, currentUserId));
+    setGoals(loadStoredData(STORAGE_KEYS.GOALS, defaultGoals, currentUserId));
+    setPurchases(loadStoredData(STORAGE_KEYS.PURCHASES, defaultPurchases, currentUserId));
+    setHabitChallenges(loadStoredData(STORAGE_KEYS.HABIT_CHALLENGES, defaultHabitChallenges, currentUserId));
+    setEmergencyNotes(loadStoredData(STORAGE_KEYS.EMERGENCY_NOTES, defaultEmergencyNotes, currentUserId));
+    setUserProfile(loadStoredData(STORAGE_KEYS.USER_PROFILE, defaultUserProfile, currentUserId));
   };
 
   // If user is not authenticated, show ONLY the Landing Login Page
@@ -546,7 +678,6 @@ export default function App() {
     return (
       <LoginPage
         onSuccessLogin={handleSuccessLogin}
-        userProfile={userProfile}
       />
     );
   }
@@ -560,9 +691,11 @@ export default function App() {
     .filter((s) => s.date === selectedDate && s.completed)
     .reduce((acc, curr) => acc + curr.durationMinutes, 0);
 
+  const pendingEmergencyNotesCount = emergencyNotes.filter((n) => !n.isCompleted).length;
+
   // Authenticated App Shell (at /home)
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans antialiased selection:bg-indigo-500 selection:text-white">
+    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans antialiased selection:bg-indigo-500 selection:text-white relative">
       
       {/* Top Header */}
       <Header
@@ -580,6 +713,7 @@ export default function App() {
         userProfile={userProfile}
         onOpenProfile={() => setActiveTab('profile')}
         onLogout={handleLogout}
+        userId={currentUserId}
       />
 
       {/* Left Navigation Sidebar + Main View Container */}
@@ -589,10 +723,21 @@ export default function App() {
           setActiveTab={setActiveTab}
           pendingTasksCount={pendingTasksCount}
           userName={userProfile.name}
+          emergencyNotesCount={pendingEmergencyNotesCount}
         />
 
         {/* Main Content Body */}
-        <main className="flex-1 overflow-x-hidden p-4 sm:p-6 lg:p-8 max-w-7xl">
+        <main className="flex-1 overflow-x-hidden p-2.5 sm:p-5 lg:p-8 max-w-7xl">
+          {activeTab === 'notes' && (
+            <EmergencyNotesSection
+              notes={emergencyNotes}
+              onAddNote={handleAddEmergencyNote}
+              onUpdateNote={handleUpdateEmergencyNote}
+              onDeleteNote={handleDeleteEmergencyNote}
+              onToggleComplete={handleToggleEmergencyNoteComplete}
+            />
+          )}
+
           {activeTab === 'profile' && (
             <ProfileSection
               userProfile={userProfile}
@@ -619,30 +764,27 @@ export default function App() {
           {activeTab === 'habit_ladder' && (
             <HabitLadderDashboard
               challenges={habitChallenges}
-              selectedDate={selectedDate}
               onToggleDate={handleToggleChallengeDate}
               onAdvanceStage={handleAdvanceChallengeStage}
-              onResetProgress={handleResetChallengeProgress}
               onAddChallenge={handleAddChallenge}
+              onResetProgress={handleResetChallengeProgress}
             />
           )}
 
           {activeTab === 'wake_sleep' && (
             <WakeSleepTracker
-              tasks={tasks}
-              dailyLog={currentDailyLog}
               selectedDate={selectedDate}
-              onToggleTask={handleToggleTask}
-              onUpdateDailyLog={handleUpdateDailyLog}
+              dailyLog={currentDailyLog}
+              onUpdateLog={handleUpdateDailyLog}
               earlySleepStreak={earlySleepStreak}
             />
           )}
 
           {activeTab === 'study_exercise' && (
             <StudyExerciseTracker
+              selectedDate={selectedDate}
               studySessions={studySessions}
               exerciseLogs={exerciseLogs}
-              selectedDate={selectedDate}
               onAddStudySession={handleAddStudySession}
               onToggleStudySession={handleToggleStudySession}
               onAddExerciseLog={handleAddExerciseLog}
@@ -652,11 +794,12 @@ export default function App() {
 
           {activeTab === 'food_health' && (
             <FoodHealthTracker
-              mealLogs={mealLogs}
-              dailyLog={currentDailyLog}
               selectedDate={selectedDate}
-              onAddMealLog={handleAddMealLog}
-              onUpdateDailyLog={handleUpdateDailyLog}
+              dailyLog={currentDailyLog}
+              mealLogs={mealLogs}
+              onUpdateLog={handleUpdateDailyLog}
+              onAddMeal={handleAddMealLog}
+              onAddWater={handleAddWater}
             />
           )}
 
@@ -665,8 +808,8 @@ export default function App() {
               goals={goals}
               onAddGoal={handleAddGoal}
               onUpdateGoal={handleUpdateGoal}
-              onToggleMilestone={handleToggleGoalMilestone}
               onDeleteGoal={handleDeleteGoal}
+              onToggleMilestone={handleToggleGoalMilestone}
             />
           )}
 
@@ -681,32 +824,56 @@ export default function App() {
 
           {activeTab === 'analytics' && (
             <AnalyticsOverview
-              tasks={tasks}
               dailyLogs={dailyLogs}
+              tasks={tasks}
               studySessions={studySessions}
               exerciseLogs={exerciseLogs}
               goals={goals}
               purchases={purchases}
-              selectedDate={selectedDate}
             />
           )}
         </main>
       </div>
 
-      {/* Quick Add Universal Modal */}
-      {isQuickAddOpen && (
-        <QuickAddModal
-          isOpen={isQuickAddOpen}
-          onClose={() => setIsQuickAddOpen(false)}
-          selectedDate={selectedDate}
-          onAddTask={handleAddTask}
-          onAddStudySession={handleAddStudySession}
-          onAddExerciseLog={handleAddExerciseLog}
-          onAddMealLog={handleAddMealLog}
-          onAddGoal={handleAddGoal}
-          onAddPurchase={handleAddPurchase}
-        />
-      )}
+      {/* Floating Emergency Note Button (visible prominently on phone view) */}
+      <div className="fixed bottom-5 right-5 z-40 md:hidden flex flex-col items-end gap-1.5">
+        <button
+          onClick={() => setIsEmergencyModalOpen(true)}
+          className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-rose-600 to-amber-500 text-white shadow-xl flex items-center justify-center border-2 border-white active:scale-95 transition-all cursor-pointer relative"
+          title="Emergency Note / Client Call Record"
+          aria-label="Emergency Note"
+        >
+          <FileText className="w-6 h-6" />
+          {pendingEmergencyNotesCount > 0 && (
+            <span className="absolute -top-1 -right-1 w-5 h-5 bg-rose-950 text-white rounded-full text-[10px] font-black border-2 border-white flex items-center justify-center animate-pulse">
+              {pendingEmergencyNotesCount}
+            </span>
+          )}
+        </button>
+        <span className="px-2 py-0.5 rounded-md bg-slate-900/90 text-white text-[10px] font-extrabold shadow-sm backdrop-blur-xs">
+          Client Note 🚨
+        </span>
+      </div>
+
+      {/* Floating Emergency Quick Modal */}
+      <EmergencyQuickModal
+        isOpen={isEmergencyModalOpen}
+        onClose={() => setIsEmergencyModalOpen(false)}
+        onAddNote={handleAddEmergencyNote}
+      />
+
+      {/* Quick Add Modal */}
+      <QuickAddModal
+        isOpen={isQuickAddOpen}
+        onClose={() => setIsQuickAddOpen(false)}
+        selectedDate={selectedDate}
+        onAddTask={handleAddTask}
+        onAddStudySession={handleAddStudySession}
+        onAddExerciseLog={handleAddExerciseLog}
+        onAddMeal={handleAddMealLog}
+        onAddGoal={handleAddGoal}
+        onAddPurchase={handleAddPurchase}
+      />
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { Task, DailyLog, StudySession, ExerciseLog, MealLog, Goal, PurchaseItem, HabitChallenge, UserProfile } from '../types';
+import { Task, DailyLog, StudySession, ExerciseLog, MealLog, Goal, PurchaseItem, HabitChallenge, UserProfile, EmergencyNote } from '../types';
 import { getTodayDateString, shiftDate } from './date';
 
 const STORAGE_KEYS = {
@@ -12,16 +12,24 @@ const STORAGE_KEYS = {
   HABIT_CHALLENGES: 'lifeos_habit_challenges_v1',
   USER_PROFILE: 'lifeos_user_profile_v1',
   AUTH_SESSION: 'lifeos_auth_session_v1',
+  EMERGENCY_NOTES: 'lifeos_emergency_notes_v1',
 };
 
-export const defaultUserProfile: UserProfile = {
-  name: 'Abhay Toriya',
-  phone: '7385302325',
-  whatsappNumber: '7385302325',
-  email: 'abhaytoriya23@gmail.com',
-  bio: 'Building consistent daily habits, focused studying, healthy digestion, and achieving high-priority life goals.',
-  city: 'Maharashtra, India',
-};
+/**
+ * Creates an empty baseline profile for any user
+ */
+export function createDefaultUserProfile(name = 'My Profile', email = ''): UserProfile {
+  return {
+    name,
+    phone: '',
+    whatsappNumber: '',
+    email,
+    bio: 'Building consistent daily habits, focused studying, healthy digestion, and achieving high-priority life goals.',
+    city: '',
+  };
+}
+
+export const defaultUserProfile: UserProfile = createDefaultUserProfile('Abhay Toriya', 'abhaytoriya23@gmail.com');
 
 const today = getTodayDateString();
 const yesterday = shiftDate(today, -1);
@@ -45,73 +53,73 @@ export const defaultTasks: Task[] = [
     category: 'wake_routine',
     priority: 'high',
     scheduledTime: '06:20',
-    completedDates: { [today]: true, [yesterday]: true },
+    completedDates: { [today]: true, [yesterday]: true, [twoDaysAgo]: true },
     recurring: 'daily',
-    notes: 'Sets circadian clock for early sleep tonight.',
+    notes: 'Reset circadian rhythm and activate cortisol gently.',
     createdAt: today,
   },
   {
     id: 't-3',
-    title: 'Focused Study Block: Core Science / Tech (90 mins)',
+    title: 'Deep Work Focus Block 1 (90 Mins)',
     category: 'study',
     priority: 'high',
     scheduledTime: '08:00',
-    completedDates: { [today]: false, [yesterday]: true, [twoDaysAgo]: true },
-    recurring: 'weekdays',
-    notes: 'Pomodoro deep focus without social media.',
+    completedDates: { [today]: true, [yesterday]: true },
+    recurring: 'daily',
+    notes: 'Phone in airplane mode. Highest cognitive task only.',
     createdAt: today,
   },
   {
     id: 't-4',
-    title: 'Workout / Cardio (45 Mins)',
-    category: 'exercise',
-    priority: 'high',
-    scheduledTime: '17:30',
-    completedDates: { [today]: false, [yesterday]: true },
+    title: 'Post-Lunch 15 Min Digestion Stroll',
+    category: 'health',
+    priority: 'medium',
+    scheduledTime: '13:30',
+    completedDates: { [yesterday]: true, [twoDaysAgo]: true },
     recurring: 'daily',
-    notes: 'Strengthen cardiovascular health & mental energy.',
+    notes: 'Aids glucose clearing and keeps stomach relaxed.',
     createdAt: today,
   },
   {
     id: 't-5',
-    title: 'Probiotic & Digestive Health Fiber Snack',
-    category: 'health',
-    priority: 'medium',
-    scheduledTime: '16:00',
-    completedDates: { [today]: true, [yesterday]: true, [twoDaysAgo]: true },
+    title: 'Evening Workout / Strength Training',
+    category: 'exercise',
+    priority: 'high',
+    scheduledTime: '17:30',
+    completedDates: { [yesterday]: true },
     recurring: 'daily',
-    notes: 'Yogurt / Papaya / Chia seeds for optimal gut digestion.',
+    notes: 'Push / Pull split or brisk 5km run.',
     createdAt: today,
   },
   {
     id: 't-6',
-    title: 'Digital Wind-Down & Blue Light Filter (9:15 PM)',
+    title: 'Night Digital Wind-down & Screen Off',
     category: 'night_routine',
     priority: 'high',
-    scheduledTime: '21:15',
+    scheduledTime: '21:30',
     completedDates: { [yesterday]: true, [twoDaysAgo]: true },
     recurring: 'daily',
-    notes: 'Screen off or reading physical book.',
+    notes: 'Warm dim lighting, book reading, zero blue light.',
     createdAt: today,
   },
   {
     id: 't-7',
-    title: 'Early Sleep Bedtime Target (10:00 PM)',
+    title: 'Target Sleep by 10:00 PM',
     category: 'night_routine',
     priority: 'high',
     scheduledTime: '22:00',
     completedDates: { [yesterday]: true, [twoDaysAgo]: true },
     recurring: 'daily',
-    notes: 'Consistent bedtime builds immune system and high energy.',
+    notes: 'Consistent bedtime locks sleep cycle and deep recovery.',
     createdAt: today,
-  }
+  },
 ];
 
 export const defaultDailyLogs: Record<string, DailyLog> = {
   [today]: {
     date: today,
     targetWakeTime: '06:00',
-    actualWakeTime: '06:05',
+    actualWakeTime: '06:10',
     targetSleepTime: '22:00',
     actualSleepTime: '',
     sleptEarly: true,
@@ -122,25 +130,25 @@ export const defaultDailyLogs: Record<string, DailyLog> = {
     waterGoalMl: 3000,
     digestionStatus: 'great',
     gutComfortRating: 5,
-    digestionNotes: 'Felt light after papaya and warm herbal tea. No bloating today.',
-    notes: 'Woke up naturally feeling refreshed. Early sleep routine is working great!',
+    digestionNotes: 'Felt light after morning warm water and sprouted salad.',
+    notes: 'Strong morning routine. Energy stayed consistent through deep work.',
   },
   [yesterday]: {
     date: yesterday,
     targetWakeTime: '06:00',
-    actualWakeTime: '06:10',
+    actualWakeTime: '06:15',
     targetSleepTime: '22:00',
     actualSleepTime: '21:50',
     sleptEarly: true,
     sleepQuality: 4,
     mood: 4,
     energyLevel: 4,
-    waterIntakeMl: 2750,
+    waterIntakeMl: 3000,
     waterGoalMl: 3000,
     digestionStatus: 'normal',
     gutComfortRating: 4,
-    digestionNotes: 'Had balanced fiber rich lunch. Digestion smooth.',
-    notes: 'In bed before 10 PM. Solid focus during morning study.',
+    digestionNotes: 'Digestion steady with timed lunch.',
+    notes: 'Hit bed by 9:50 PM. Woke up refreshed.',
   },
   [twoDaysAgo]: {
     date: twoDaysAgo,
@@ -164,29 +172,20 @@ export const defaultDailyLogs: Record<string, DailyLog> = {
 export const defaultStudySessions: StudySession[] = [
   {
     id: 's-1',
-    date: today,
-    subject: 'System Architecture & Data Structures',
+    subject: 'DSA & Advanced Algorithms Problem Solving',
     durationMinutes: 90,
+    date: today,
     type: 'deep_work',
-    notes: 'Focused on graph algorithms and system design patterns.',
+    notes: 'Solved 2 Dynamic Programming questions with full focus.',
     completed: true,
   },
   {
     id: 's-2',
-    date: today,
-    subject: 'AI & Machine Learning Research',
+    subject: 'System Architecture & Scalability Reading',
     durationMinutes: 60,
-    type: 'reading',
-    notes: 'Read paper on transformer optimizations and prompt engineering.',
-    completed: false,
-  },
-  {
-    id: 's-3',
     date: yesterday,
-    subject: 'Fullstack Web Development & Database Indexing',
-    durationMinutes: 120,
-    type: 'practice',
-    notes: 'Implemented RESTful API routes and query performance tuning.',
+    type: 'reading',
+    notes: 'Reviewed message queues and distributed caching patterns.',
     completed: true,
   }
 ];
@@ -194,32 +193,22 @@ export const defaultStudySessions: StudySession[] = [
 export const defaultExerciseLogs: ExerciseLog[] = [
   {
     id: 'e-1',
-    date: today,
     workoutType: 'strength',
     durationMinutes: 45,
     intensity: 'intense',
-    caloriesBurned: 350,
-    notes: 'Upper body resistance + core stability training.',
-    completed: false,
-  },
-  {
-    id: 'e-2',
     date: yesterday,
-    workoutType: 'cardio',
-    durationMinutes: 30,
-    intensity: 'moderate',
-    caloriesBurned: 280,
-    notes: 'Outdoor brisk interval run at 6:30 PM.',
+    caloriesBurned: 340,
+    notes: 'Chest and triceps with progressive overload.',
     completed: true,
   },
   {
-    id: 'e-3',
-    date: twoDaysAgo,
-    workoutType: 'yoga',
+    id: 'e-2',
+    workoutType: 'walking',
     durationMinutes: 30,
     intensity: 'light',
-    caloriesBurned: 120,
-    notes: 'Evening mobility, hip openers, and spine decompression.',
+    date: today,
+    caloriesBurned: 160,
+    notes: 'Morning fresh air and mobility stretches.',
     completed: true,
   }
 ];
@@ -227,169 +216,97 @@ export const defaultExerciseLogs: ExerciseLog[] = [
 export const defaultMealLogs: MealLog[] = [
   {
     id: 'm-1',
-    date: today,
-    time: '08:15',
     mealType: 'breakfast',
-    foodItems: 'Oatmeal with chia seeds, banana, blueberries, and almond butter',
+    date: today,
+    time: '08:30',
+    foodItems: 'Sprouted Moong Salad & Warm Cumin Infusion',
     digestionImpact: 'easy',
     fiberRich: true,
-    notes: 'Very soothing for gut health and long-sustained energy.',
+    notes: 'Zero heaviness, sustained morning focus.',
   },
   {
     id: 'm-2',
+    mealType: 'lunch',
     date: today,
     time: '13:00',
-    mealType: 'lunch',
-    foodItems: 'Steamed brown rice, grilled chicken breast, spinach, and avocado salad',
+    foodItems: 'Wholesome Khichdi with Ghee & Curd',
     digestionImpact: 'easy',
     fiberRich: true,
-    notes: 'Felt light and energetic post-lunch.',
-  },
-  {
-    id: 'm-3',
-    date: yesterday,
-    time: '19:30',
-    mealType: 'dinner',
-    foodItems: 'Lentil vegetable soup with sourdough bread & steamed broccoli',
-    digestionImpact: 'easy',
-    fiberRich: true,
-    notes: 'Eaten 2.5 hours before sleep for effortless digestion.',
+    notes: 'Easy digestion, avoided overeating.',
   }
 ];
 
 export const defaultGoals: Goal[] = [
   {
     id: 'g-1',
-    title: 'Achieve 30-Day Early Sleeper & 6:00 AM Wake Streak',
-    category: 'health',
-    targetDate: '2026-08-31',
-    progress: 75,
+    title: '30-Day Early Sleep Mastery (Before 10 PM)',
+    category: 'lifestyle',
+    targetDate: shiftDate(today, 25),
+    progress: 70,
     status: 'in_progress',
-    motivation: 'Wake up fresh without fatigue, maximize daily focus and cognitive vitality.',
     milestones: [
-      { id: 'm-1-1', title: 'Maintain 7 consecutive nights bedtime before 10 PM', completed: true },
-      { id: 'm-1-2', title: 'Maintain 14 consecutive nights bedtime before 10 PM', completed: true },
-      { id: 'm-1-3', title: 'Complete 30 days without late-night screens', completed: false }
+      { id: 'm-1', title: 'Lock 9:30 PM screen cutoff habit', completed: true },
+      { id: 'm-2', title: '7-day continuous streak', completed: true },
+      { id: 'm-3', title: 'Complete 30 consecutive days', completed: false },
     ],
-    createdAt: today
+    motivation: 'Consistency in bedtime anchors the entire day.',
+    createdAt: today,
   },
   {
     id: 'g-2',
-    title: 'Master Advanced Fullstack & AI Engineering Curriculum',
+    title: 'Master 100 Deep Work Coding Hours',
     category: 'career',
-    targetDate: '2026-09-15',
-    progress: 60,
+    targetDate: shiftDate(today, 45),
+    progress: 45,
     status: 'in_progress',
-    motivation: 'Build high-performance distributed systems and AI applications.',
     milestones: [
-      { id: 'm-2-1', title: 'Complete 50 hours of deep work study sessions', completed: true },
-      { id: 'm-2-2', title: 'Publish 3 open-source system tools', completed: true },
-      { id: 'm-2-3', title: 'Deploy full scale Cloud architecture app', completed: false }
+      { id: 'm-4', title: 'Complete 25 hours deep focus', completed: true },
+      { id: 'm-5', title: 'Reach 50 hours deep focus', completed: false },
+      { id: 'm-6', title: 'Hit 100 milestone target', completed: false },
     ],
-    createdAt: today
-  },
-  {
-    id: 'g-3',
-    title: 'Optimal Gut & Digestive Health System',
-    category: 'health',
-    targetDate: '2026-08-15',
-    progress: 80,
-    status: 'in_progress',
-    motivation: 'Maintain 30g+ daily dietary fiber, 3L water, and 0 digestive discomfort.',
-    milestones: [
-      { id: 'm-3-1', title: 'Drink 3L water daily for 14 straight days', completed: true },
-      { id: 'm-3-2', title: 'Log meal digestion notes daily for 3 weeks', completed: true },
-      { id: 'm-3-3', title: 'Eliminate ultra-processed late night snacking', completed: true }
-    ],
-    createdAt: today
+    motivation: 'Quality focus with zero task switching.',
+    createdAt: today,
   }
 ];
 
 export const defaultPurchases: PurchaseItem[] = [
   {
     id: 'p-1',
-    name: 'Ergonomic Mesh Chair with Lumbar Support',
-    category: 'home',
-    priority: 'must_have',
-    estimatedCost: 280,
-    targetDate: '2026-08-10',
-    status: 'saved_for',
-    url: 'https://example.com/ergonomic-chair',
-    notes: 'Crucial for posture during study and long work sessions.',
-    createdAt: today
+    name: 'Ergonomic Lumbar Support Cushion',
+    estimatedCost: 1499,
+    category: 'health',
+    status: 'planned',
+    priority: 'high',
+    notes: 'Maintains spinal alignment during long study blocks.',
+    createdAt: today,
   },
   {
     id: 'p-2',
-    name: 'Blue Light Blocking Glasses & Sleep Mask Set',
-    category: 'health',
-    priority: 'high',
-    estimatedCost: 35,
-    targetDate: '2026-08-01',
+    name: 'High-Density 32oz Insulated Water Flask',
+    estimatedCost: 899,
+    category: 'fitness',
     status: 'planned',
-    notes: 'Helps melatonin secretion for early sleep routine.',
-    createdAt: today
-  },
-  {
-    id: 'p-3',
-    name: 'Cold Press Slow Juicer for Gut Health Drinks',
-    category: 'health',
-    priority: 'medium',
-    estimatedCost: 120,
-    targetDate: '2026-08-20',
-    status: 'planned',
-    notes: 'For fresh celery, ginger, and beet juices to boost digestion.',
-    createdAt: today
-  },
-  {
-    id: 'p-4',
-    name: 'Noise-Canceling Wireless Headphones',
-    category: 'tech',
     priority: 'high',
-    estimatedCost: 199,
-    targetDate: '2026-09-01',
-    status: 'purchased',
-    notes: 'Zero-distraction deep work study blocks.',
-    createdAt: today
+    notes: 'Keeps water chilled and visible on desk to hit 3L goal.',
+    createdAt: today,
   }
 ];
 
 export const defaultHabitChallenges: HabitChallenge[] = [
   {
     id: 'hc-1',
-    title: 'Sunrise Wake-Up (6:00 AM)',
+    title: 'Early Bedtime (In Bed by 10:00 PM)',
     category: 'wake_up',
-    targetDays: 3,
+    targetDays: 6,
     completedDates: [twoDaysAgo, yesterday],
-    currentStage: '3_day',
+    currentStage: '6_day',
     startDate: twoDaysAgo,
-    notes: 'Hydrate immediately upon waking. Catch 15 min morning sunlight.',
-    brainComfortTip: 'Step 1: Focus purely on 3 days. Your brain experiences zero overwhelm when the goal is just 3 days.',
+    notes: 'Brain comfort ladder: Start with 3 days, graduate to 6, then lock 11 days.',
+    brainComfortTip: 'Tell your brain: "I only need to do this tonight." Small promises build unbreakable momentum.',
   },
   {
     id: 'hc-2',
-    title: 'Focused Deep Work Study (90 Mins)',
-    category: 'study',
-    targetDays: 3,
-    completedDates: [twoDaysAgo, yesterday],
-    currentStage: '3_day',
-    startDate: twoDaysAgo,
-    notes: 'Pomodoro focus blocks for core science, coding & revision.',
-    brainComfortTip: 'Breaking daunting study goals into 3-day micro horizons removes cognitive friction.',
-  },
-  {
-    id: 'hc-3',
-    title: 'Daily Exercise & Body Movement (45 Mins)',
-    category: 'exercise',
-    targetDays: 3,
-    completedDates: [yesterday],
-    currentStage: '3_day',
-    startDate: yesterday,
-    notes: 'Strength training or cardio. Releases brain endorphins & reduces stress.',
-    brainComfortTip: 'Physical movement triggers BDNF (brain-derived neurotrophic factor), accelerating habit formation.',
-  },
-  {
-    id: 'hc-4',
-    title: 'Hydration (3L Water) & Probiotic Fiber Meal',
+    title: 'Daily 3000ml Hydration & Clean Gut Fuel',
     category: 'health',
     targetDays: 3,
     completedDates: [twoDaysAgo, yesterday],
@@ -400,9 +317,41 @@ export const defaultHabitChallenges: HabitChallenge[] = [
   }
 ];
 
-export function loadStoredData<T>(key: string, fallback: T): T {
+export const defaultEmergencyNotes: EmergencyNote[] = [
+  {
+    id: 'en-1',
+    title: 'Client Urgent Feature Request - Dashboard Export',
+    content: 'Client called needing CSV and JSON export options for monthly habit sheets before tomorrow morning meeting.',
+    clientName: 'Alpha Tech Client',
+    phoneNumber: '+91 98765 43210',
+    category: 'client_request',
+    priority: 'high',
+    isCompleted: false,
+    createdAt: today,
+  },
+  {
+    id: 'en-2',
+    title: 'Critical Server API Rate Limiting Verification',
+    content: 'Double-check database write batches and ensure retry backoff logic handles any spike gracefully.',
+    category: 'emergency_todo',
+    priority: 'high',
+    isCompleted: false,
+    createdAt: today,
+  }
+];
+
+/**
+ * Returns a user-scoped storage key
+ */
+export function getUserStorageKey(baseKey: string, userId?: string): string {
+  if (!userId) return baseKey;
+  return `${baseKey}_${userId}`;
+}
+
+export function loadStoredData<T>(key: string, fallback: T, userId?: string): T {
   try {
-    const raw = localStorage.getItem(key);
+    const finalKey = getUserStorageKey(key, userId);
+    const raw = localStorage.getItem(finalKey);
     if (!raw) return fallback;
     return JSON.parse(raw);
   } catch (err) {
@@ -411,40 +360,45 @@ export function loadStoredData<T>(key: string, fallback: T): T {
   }
 }
 
-export function saveStoredData<T>(key: string, value: T): void {
+export function saveStoredData<T>(key: string, value: T, userId?: string): void {
   try {
-    localStorage.setItem(key, JSON.stringify(value));
+    const finalKey = getUserStorageKey(key, userId);
+    localStorage.setItem(finalKey, JSON.stringify(value));
   } catch (err) {
     console.error(`Error saving storage key ${key}:`, err);
   }
 }
 
-export function exportAllUserData(): string {
+export function exportAllUserData(userId?: string): string {
   const data = {
-    tasks: loadStoredData(STORAGE_KEYS.TASKS, defaultTasks),
-    dailyLogs: loadStoredData(STORAGE_KEYS.DAILY_LOGS, defaultDailyLogs),
-    studySessions: loadStoredData(STORAGE_KEYS.STUDY_SESSIONS, defaultStudySessions),
-    exerciseLogs: loadStoredData(STORAGE_KEYS.EXERCISE_LOGS, defaultExerciseLogs),
-    mealLogs: loadStoredData(STORAGE_KEYS.MEAL_LOGS, defaultMealLogs),
-    goals: loadStoredData(STORAGE_KEYS.GOALS, defaultGoals),
-    purchases: loadStoredData(STORAGE_KEYS.PURCHASES, defaultPurchases),
-    habitChallenges: loadStoredData(STORAGE_KEYS.HABIT_CHALLENGES, defaultHabitChallenges),
+    tasks: loadStoredData(STORAGE_KEYS.TASKS, defaultTasks, userId),
+    dailyLogs: loadStoredData(STORAGE_KEYS.DAILY_LOGS, defaultDailyLogs, userId),
+    studySessions: loadStoredData(STORAGE_KEYS.STUDY_SESSIONS, defaultStudySessions, userId),
+    exerciseLogs: loadStoredData(STORAGE_KEYS.EXERCISE_LOGS, defaultExerciseLogs, userId),
+    mealLogs: loadStoredData(STORAGE_KEYS.MEAL_LOGS, defaultMealLogs, userId),
+    goals: loadStoredData(STORAGE_KEYS.GOALS, defaultGoals, userId),
+    purchases: loadStoredData(STORAGE_KEYS.PURCHASES, defaultPurchases, userId),
+    habitChallenges: loadStoredData(STORAGE_KEYS.HABIT_CHALLENGES, defaultHabitChallenges, userId),
+    emergencyNotes: loadStoredData(STORAGE_KEYS.EMERGENCY_NOTES, defaultEmergencyNotes, userId),
+    profile: loadStoredData(STORAGE_KEYS.USER_PROFILE, defaultUserProfile, userId),
     exportedAt: new Date().toISOString(),
   };
   return JSON.stringify(data, null, 2);
 }
 
-export function importUserData(jsonString: string): boolean {
+export function importUserData(jsonString: string, userId?: string): boolean {
   try {
     const data = JSON.parse(jsonString);
-    if (data.tasks) saveStoredData(STORAGE_KEYS.TASKS, data.tasks);
-    if (data.dailyLogs) saveStoredData(STORAGE_KEYS.DAILY_LOGS, data.dailyLogs);
-    if (data.studySessions) saveStoredData(STORAGE_KEYS.STUDY_SESSIONS, data.studySessions);
-    if (data.exerciseLogs) saveStoredData(STORAGE_KEYS.EXERCISE_LOGS, data.exerciseLogs);
-    if (data.mealLogs) saveStoredData(STORAGE_KEYS.MEAL_LOGS, data.mealLogs);
-    if (data.goals) saveStoredData(STORAGE_KEYS.GOALS, data.goals);
-    if (data.purchases) saveStoredData(STORAGE_KEYS.PURCHASES, data.purchases);
-    if (data.habitChallenges) saveStoredData(STORAGE_KEYS.HABIT_CHALLENGES, data.habitChallenges);
+    if (data.tasks) saveStoredData(STORAGE_KEYS.TASKS, data.tasks, userId);
+    if (data.dailyLogs) saveStoredData(STORAGE_KEYS.DAILY_LOGS, data.dailyLogs, userId);
+    if (data.studySessions) saveStoredData(STORAGE_KEYS.STUDY_SESSIONS, data.studySessions, userId);
+    if (data.exerciseLogs) saveStoredData(STORAGE_KEYS.EXERCISE_LOGS, data.exerciseLogs, userId);
+    if (data.mealLogs) saveStoredData(STORAGE_KEYS.MEAL_LOGS, data.mealLogs, userId);
+    if (data.goals) saveStoredData(STORAGE_KEYS.GOALS, data.goals, userId);
+    if (data.purchases) saveStoredData(STORAGE_KEYS.PURCHASES, data.purchases, userId);
+    if (data.habitChallenges) saveStoredData(STORAGE_KEYS.HABIT_CHALLENGES, data.habitChallenges, userId);
+    if (data.emergencyNotes) saveStoredData(STORAGE_KEYS.EMERGENCY_NOTES, data.emergencyNotes, userId);
+    if (data.profile) saveStoredData(STORAGE_KEYS.USER_PROFILE, data.profile, userId);
     return true;
   } catch (err) {
     console.error('Failed to import user data:', err);
@@ -452,15 +406,17 @@ export function importUserData(jsonString: string): boolean {
   }
 }
 
-export function resetAllDataToDefault(): void {
-  localStorage.removeItem(STORAGE_KEYS.TASKS);
-  localStorage.removeItem(STORAGE_KEYS.DAILY_LOGS);
-  localStorage.removeItem(STORAGE_KEYS.STUDY_SESSIONS);
-  localStorage.removeItem(STORAGE_KEYS.EXERCISE_LOGS);
-  localStorage.removeItem(STORAGE_KEYS.MEAL_LOGS);
-  localStorage.removeItem(STORAGE_KEYS.GOALS);
-  localStorage.removeItem(STORAGE_KEYS.PURCHASES);
-  localStorage.removeItem(STORAGE_KEYS.HABIT_CHALLENGES);
+export function resetAllDataToDefault(userId?: string): void {
+  localStorage.removeItem(getUserStorageKey(STORAGE_KEYS.TASKS, userId));
+  localStorage.removeItem(getUserStorageKey(STORAGE_KEYS.DAILY_LOGS, userId));
+  localStorage.removeItem(getUserStorageKey(STORAGE_KEYS.STUDY_SESSIONS, userId));
+  localStorage.removeItem(getUserStorageKey(STORAGE_KEYS.EXERCISE_LOGS, userId));
+  localStorage.removeItem(getUserStorageKey(STORAGE_KEYS.MEAL_LOGS, userId));
+  localStorage.removeItem(getUserStorageKey(STORAGE_KEYS.GOALS, userId));
+  localStorage.removeItem(getUserStorageKey(STORAGE_KEYS.PURCHASES, userId));
+  localStorage.removeItem(getUserStorageKey(STORAGE_KEYS.HABIT_CHALLENGES, userId));
+  localStorage.removeItem(getUserStorageKey(STORAGE_KEYS.EMERGENCY_NOTES, userId));
+  localStorage.removeItem(getUserStorageKey(STORAGE_KEYS.USER_PROFILE, userId));
 }
 
 export { STORAGE_KEYS };
