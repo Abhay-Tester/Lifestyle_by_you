@@ -399,7 +399,7 @@ export const QuickAddModal: React.FC<QuickAddModalProps> = ({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-slate-600 font-medium block mb-1">Estimated Cost ($)</label>
+                  <label className="text-slate-600 font-medium block mb-1">Estimated Cost (₹ Rupees)</label>
                   <input
                     type="number"
                     value={purchaseCost}

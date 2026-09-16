@@ -1,24 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  Calendar, 
-  ChevronLeft, 
-  ChevronRight, 
   Plus, 
   Download, 
   Upload, 
   RotateCcw, 
   Sparkles,
   User,
-  LogOut,
-  RefreshCw
+  LogOut
 } from 'lucide-react';
-import { formatDateFriendly, shiftDate, getTodayDateString } from '../utils/date';
-import { exportAllUserData, importUserData, resetAllDataToDefault } from '../utils/storage';
+import { getTodayDateString } from '../utils/date';
+import { exportAllUserData, importUserData } from '../utils/storage';
 import { UserProfile } from '../types';
 
 interface HeaderProps {
-  selectedDate: string;
-  setSelectedDate: (date: string) => void;
+  selectedDate?: string;
+  setSelectedDate?: (date: string) => void;
   onOpenQuickAdd: () => void;
   earlySleepStreak?: number;
   todayCompletionRate?: number;
@@ -30,6 +26,8 @@ interface HeaderProps {
   onOpenProfile?: () => void;
   onLogout?: () => void;
   userId?: string;
+  cloudSyncStatus?: string;
+  onManualCloudSync?: () => void;
 }
 
 const MOTIVATION_QUOTES = [
@@ -42,8 +40,7 @@ const MOTIVATION_QUOTES = [
 ];
 
 export const Header: React.FC<HeaderProps> = ({
-  selectedDate,
-  setSelectedDate,
+  selectedDate = getTodayDateString(),
   onOpenQuickAdd,
   onDataRefresh,
   userProfile,
@@ -52,7 +49,6 @@ export const Header: React.FC<HeaderProps> = ({
   userId,
 }) => {
   const [showMenu, setShowMenu] = useState(false);
-  const isToday = selectedDate === getTodayDateString();
 
   // Dynamic daily motivation line
   const [motivationQuote, setMotivationQuote] = useState(() => {
@@ -94,14 +90,6 @@ export const Header: React.FC<HeaderProps> = ({
     reader.readAsText(file);
   };
 
-  const handleReset = () => {
-    if (confirm('Are you sure you want to reset all data back to clean defaults?')) {
-      resetAllDataToDefault(userId);
-      onDataRefresh();
-      setShowMenu(false);
-    }
-  };
-
   return (
     <header className="sticky top-0 z-40 bg-slate-900 border-b border-slate-800 text-white shadow-md">
       <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
@@ -126,41 +114,7 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           </div>
 
-          {/* Date Selector: Desktop View */}
-          <div className="hidden sm:flex items-center justify-center bg-slate-800/90 p-1 sm:p-1.5 rounded-xl border border-slate-700/70 shadow-inner shrink-0">
-            <button
-              onClick={() => setSelectedDate(shiftDate(selectedDate, -1))}
-              className="p-1 sm:p-1.5 hover:bg-slate-700 rounded-lg text-slate-300 hover:text-white transition-colors cursor-pointer"
-              title="Previous Day"
-            >
-              <ChevronLeft className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            </button>
-
-            <div className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3">
-              <Calendar className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-              <span className="text-xs sm:text-sm font-semibold text-slate-100 min-w-[85px] sm:min-w-[110px] text-center whitespace-nowrap">
-                {formatDateFriendly(selectedDate)}
-              </span>
-              {!isToday && (
-                <button
-                  onClick={() => setSelectedDate(getTodayDateString())}
-                  className="text-[10px] sm:text-xs text-emerald-400 hover:underline font-semibold ml-0.5 cursor-pointer"
-                >
-                  Today
-                </button>
-              )}
-            </div>
-
-            <button
-              onClick={() => setSelectedDate(shiftDate(selectedDate, 1))}
-              className="p-1 sm:p-1.5 hover:bg-slate-700 rounded-lg text-slate-300 hover:text-white transition-colors cursor-pointer"
-              title="Next Day"
-            >
-              <ChevronRight className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-            </button>
-          </div>
-
-          {/* Center Motivation Banner (Desktop only) */}
+          {/* Center Motivation Banner */}
           <div className="hidden md:flex flex-1 items-center justify-center px-4 overflow-hidden">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-slate-800/80 border border-slate-700/60 text-slate-200 text-xs font-medium max-w-full">
               <Sparkles className="w-3.5 h-3.5 text-amber-400 shrink-0 animate-pulse" />
@@ -257,58 +211,11 @@ export const Header: React.FC<HeaderProps> = ({
                       className="hidden" 
                     />
                   </label>
-
-                  <hr className="my-1.5 border-slate-700" />
-
-                  <button
-                    onClick={handleReset}
-                    className="w-full text-left px-3 py-2 hover:bg-red-500/20 text-red-300 flex items-center gap-2 cursor-pointer"
-                  >
-                    <RefreshCw className="w-3.5 h-3.5 text-red-400" />
-                    <span>Reset to Template</span>
-                  </button>
                 </div>
               )}
             </div>
           </div>
 
-        </div>
-
-        {/* Dedicated Mobile Date Navigator Row (Phone only) */}
-        <div className="sm:hidden pb-2.5 pt-1 flex items-center justify-between gap-1.5">
-          <div className="flex-1 flex items-center justify-between bg-slate-800/90 p-1 rounded-xl border border-slate-700/70 shadow-inner">
-            <button
-              onClick={() => setSelectedDate(shiftDate(selectedDate, -1))}
-              className="p-1.5 hover:bg-slate-700 rounded-lg text-slate-300 hover:text-white transition-colors cursor-pointer"
-              title="Previous Day"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-
-            <div className="flex items-center gap-1.5 px-2">
-              <Calendar className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-              <span className="text-xs font-semibold text-slate-100 whitespace-nowrap">
-                {formatDateFriendly(selectedDate)}
-              </span>
-            </div>
-
-            <button
-              onClick={() => setSelectedDate(shiftDate(selectedDate, 1))}
-              className="p-1.5 hover:bg-slate-700 rounded-lg text-slate-300 hover:text-white transition-colors cursor-pointer"
-              title="Next Day"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-          </div>
-
-          {!isToday && (
-            <button
-              onClick={() => setSelectedDate(getTodayDateString())}
-              className="px-2.5 py-1.5 bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 rounded-xl text-xs font-bold shrink-0 cursor-pointer"
-            >
-              Today
-            </button>
-          )}
         </div>
 
         {/* Mobile Motivation Quote Sub-bar */}

@@ -203,8 +203,10 @@ export const AnalyticsOverview: React.FC<AnalyticsOverviewProps> = ({
                 <span>Future Purchase List</span>
                 <span className="text-indigo-600 font-mono font-bold">{purchases.length} Items</span>
               </div>
-              <div className="text-slate-600">
-                Purchased: {purchases.filter(p => p.status === 'purchased').length} | Planned: {purchases.filter(p => p.status === 'planned').length}
+              <div className="text-slate-600 flex flex-wrap items-center justify-between gap-1 text-[11px] font-medium">
+                <span>Purchased: {purchases.filter(p => p.status === 'purchased').length} (₹{purchases.filter(p => p.status === 'purchased').reduce((s, p) => s + p.estimatedCost, 0).toLocaleString('en-IN')})</span>
+                <span className="text-slate-300">•</span>
+                <span>Planned: {purchases.filter(p => p.status === 'planned').length} (₹{purchases.filter(p => p.status === 'planned').reduce((s, p) => s + p.estimatedCost, 0).toLocaleString('en-IN')})</span>
               </div>
             </div>
 

@@ -11,7 +11,7 @@ import {
   Heart, 
   Briefcase, 
   BookOpen, 
-  DollarSign, 
+  IndianRupee, 
   Smile, 
   TrendingUp,
   Trash2
@@ -80,7 +80,7 @@ export const GoalManager: React.FC<GoalManagerProps> = ({
     health: Heart,
     career: Briefcase,
     learning: BookOpen,
-    finance: DollarSign,
+    finance: IndianRupee,
     lifestyle: Smile,
     mindset: Sparkles,
   };

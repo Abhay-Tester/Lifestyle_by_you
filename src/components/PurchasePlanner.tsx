@@ -3,7 +3,7 @@ import { PurchaseItem } from '../types';
 import { 
   ShoppingBag, 
   Plus, 
-  DollarSign, 
+  IndianRupee, 
   CheckCircle2, 
   ExternalLink, 
   Trash2, 
@@ -94,12 +94,12 @@ export const PurchasePlanner: React.FC<PurchasePlannerProps> = ({
         <div className="flex items-center gap-4 bg-slate-50 px-4 py-2 rounded-xl border border-slate-200 shrink-0 text-xs">
           <div>
             <span className="text-slate-500 block">Planned Cost</span>
-            <strong className="text-indigo-600 font-mono text-sm">${totalPlannedCost}</strong>
+            <strong className="text-indigo-600 font-mono text-sm">₹{totalPlannedCost.toLocaleString('en-IN')}</strong>
           </div>
           <div className="h-6 w-px bg-slate-200" />
           <div>
             <span className="text-slate-500 block">Purchased Total</span>
-            <strong className="text-emerald-600 font-mono text-sm">${totalSpentCost}</strong>
+            <strong className="text-emerald-600 font-mono text-sm">₹{totalSpentCost.toLocaleString('en-IN')}</strong>
           </div>
         </div>
       </div>
@@ -204,7 +204,7 @@ export const PurchasePlanner: React.FC<PurchasePlannerProps> = ({
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
-              <label className="text-slate-600 font-medium block mb-1">Estimated Cost ($)</label>
+              <label className="text-slate-600 font-medium block mb-1">Estimated Cost (₹ Rupees)</label>
               <input
                 type="number"
                 value={estimatedCost}
@@ -314,7 +314,7 @@ export const PurchasePlanner: React.FC<PurchasePlannerProps> = ({
                 )}
 
                 <div className="flex items-center justify-between pt-1">
-                  <span className="text-xl font-mono font-bold text-indigo-600">${item.estimatedCost}</span>
+                  <span className="text-xl font-mono font-bold text-indigo-600">₹{item.estimatedCost.toLocaleString('en-IN')}</span>
                   {item.targetDate && (
                     <span className="text-xs text-slate-500 flex items-center gap-1 font-mono">
                       <Calendar className="w-3.5 h-3.5" />
