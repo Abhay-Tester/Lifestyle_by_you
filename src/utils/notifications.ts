@@ -63,7 +63,7 @@ function markTriggeredToday(key: string) {
 }
 
 /**
- * Play synthesized notification audio using Web Audio API (supports 4 tone presets)
+ * Play synthesized notification audio using Web Audio API (extended to 4.5 - 5 seconds duration)
  */
 export function playNotificationChime(type: NotificationSoundType = 'chime', volume: number = 0.8) {
   try {
@@ -73,70 +73,97 @@ export function playNotificationChime(type: NotificationSoundType = 'chime', vol
     const vol = Math.max(0, Math.min(1, volume));
 
     if (type === 'bell') {
-      // Deep Meditation Gong / Tibetan Bell
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(440, ctx.currentTime); // A4
-      osc.frequency.exponentialRampToValueAtTime(220, ctx.currentTime + 1.2);
-      gain.gain.setValueAtTime(0.3 * vol, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1.2);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + 1.2);
-    } else if (type === 'digital') {
-      // Energetic Digital Alarm Beep Beep
-      [0, 0.15].forEach((delay) => {
+      // Tibetan Bell / Meditation Gong (4.8 seconds total sustain with two resonant strikes)
+      const strikes = [0.0, 2.3];
+      strikes.forEach((startTime) => {
+        // Fundamental tone (A4 -> A3 decay)
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
-        osc.type = 'square';
-        osc.frequency.setValueAtTime(880, ctx.currentTime + delay);
-        gain.gain.setValueAtTime(0.12 * vol, ctx.currentTime + delay);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.1);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(440, ctx.currentTime + startTime);
+        osc.frequency.exponentialRampToValueAtTime(220, ctx.currentTime + startTime + 2.3);
+        gain.gain.setValueAtTime(0.35 * vol, ctx.currentTime + startTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + startTime + 2.3);
         osc.connect(gain);
         gain.connect(ctx.destination);
-        osc.start(ctx.currentTime + delay);
-        osc.stop(ctx.currentTime + delay + 0.1);
+        osc.start(ctx.currentTime + startTime);
+        osc.stop(ctx.currentTime + startTime + 2.3);
+
+        // High harmonic shimmer
+        const oscHarmonic = ctx.createOscillator();
+        const gainHarmonic = ctx.createGain();
+        oscHarmonic.type = 'sine';
+        oscHarmonic.frequency.setValueAtTime(880, ctx.currentTime + startTime);
+        gainHarmonic.gain.setValueAtTime(0.12 * vol, ctx.currentTime + startTime);
+        gainHarmonic.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + startTime + 1.8);
+        oscHarmonic.connect(gainHarmonic);
+        gainHarmonic.connect(ctx.destination);
+        oscHarmonic.start(ctx.currentTime + startTime);
+        oscHarmonic.stop(ctx.currentTime + startTime + 1.8);
+      });
+    } else if (type === 'digital') {
+      // Energetic Digital Alarm (5 alarm pulse cycles across 4.5 seconds)
+      const pulseDelays = [0.0, 0.9, 1.8, 2.7, 3.6];
+      pulseDelays.forEach((pulseStart) => {
+        [0.0, 0.14].forEach((subOffset) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'square';
+          osc.frequency.setValueAtTime(960, ctx.currentTime + pulseStart + subOffset);
+          gain.gain.setValueAtTime(0.14 * vol, ctx.currentTime + pulseStart + subOffset);
+          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + pulseStart + subOffset + 0.1);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(ctx.currentTime + pulseStart + subOffset);
+          osc.stop(ctx.currentTime + pulseStart + subOffset + 0.1);
+        });
       });
     } else if (type === 'gentle') {
-      // Gentle Harmonic Marimba Chords
-      const notes = [523.25, 659.25, 783.99]; // C5, E5, G5
-      notes.forEach((freq, idx) => {
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.type = 'triangle';
-        osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.1);
-        gain.gain.setValueAtTime(0.2 * vol, ctx.currentTime + idx * 0.1);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + idx * 0.1 + 0.5);
-        osc.connect(gain);
-        gain.connect(ctx.destination);
-        osc.start(ctx.currentTime + idx * 0.1);
-        osc.stop(ctx.currentTime + idx * 0.1 + 0.5);
+      // Gentle Harmonic Marimba (3 repeating chord loops over 4.5 seconds)
+      const loops = [0.0, 1.5, 3.0];
+      const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+      loops.forEach((loopStart) => {
+        notes.forEach((freq, idx) => {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(freq, ctx.currentTime + loopStart + idx * 0.12);
+          gain.gain.setValueAtTime(0.22 * vol, ctx.currentTime + loopStart + idx * 0.12);
+          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + loopStart + idx * 0.12 + 0.6);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(ctx.currentTime + loopStart + idx * 0.12);
+          osc.stop(ctx.currentTime + loopStart + idx * 0.12 + 0.6);
+        });
       });
     } else {
-      // Default: Soft Dual Crystal Chime (G5 -> C6)
-      const osc1 = ctx.createOscillator();
-      const gain1 = ctx.createGain();
-      osc1.type = 'sine';
-      osc1.frequency.setValueAtTime(783.99, ctx.currentTime);
-      gain1.gain.setValueAtTime(0.15 * vol, ctx.currentTime);
-      gain1.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
-      osc1.connect(gain1);
-      gain1.connect(ctx.destination);
-      osc1.start(ctx.currentTime);
-      osc1.stop(ctx.currentTime + 0.4);
+      // Default: Soft Dual Crystal Chime (5 chime cycles over 4.5 seconds)
+      const chimeDelays = [0.0, 0.9, 1.8, 2.7, 3.6];
+      chimeDelays.forEach((delay) => {
+        // First tone (G5)
+        const osc1 = ctx.createOscillator();
+        const gain1 = ctx.createGain();
+        osc1.type = 'sine';
+        osc1.frequency.setValueAtTime(783.99, ctx.currentTime + delay);
+        gain1.gain.setValueAtTime(0.18 * vol, ctx.currentTime + delay);
+        gain1.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.35);
+        osc1.connect(gain1);
+        gain1.connect(ctx.destination);
+        osc1.start(ctx.currentTime + delay);
+        osc1.stop(ctx.currentTime + delay + 0.35);
 
-      const osc2 = ctx.createOscillator();
-      const gain2 = ctx.createGain();
-      osc2.type = 'sine';
-      osc2.frequency.setValueAtTime(1046.50, ctx.currentTime + 0.15);
-      gain2.gain.setValueAtTime(0.2 * vol, ctx.currentTime + 0.15);
-      gain2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
-      osc2.connect(gain2);
-      gain2.connect(ctx.destination);
-      osc2.start(ctx.currentTime + 0.15);
-      osc2.stop(ctx.currentTime + 0.6);
+        // Second tone (C6 chime)
+        const osc2 = ctx.createOscillator();
+        const gain2 = ctx.createGain();
+        osc2.type = 'sine';
+        osc2.frequency.setValueAtTime(1046.50, ctx.currentTime + delay + 0.14);
+        gain2.gain.setValueAtTime(0.22 * vol, ctx.currentTime + delay + 0.14);
+        gain2.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + delay + 0.55);
+        osc2.connect(gain2);
+        gain2.connect(ctx.destination);
+        osc2.start(ctx.currentTime + delay + 0.14);
+        osc2.stop(ctx.currentTime + delay + 0.55);
+      });
     }
   } catch {
     // Web audio playback fallback ignore
