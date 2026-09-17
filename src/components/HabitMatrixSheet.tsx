@@ -22,7 +22,7 @@ import {
   AlertTriangle,
   Bell
 } from 'lucide-react';
-import { formatTime12Hour } from '../utils/notifications';
+import { getTodayDateString } from '../utils/date';
 
 interface HabitMatrixSheetProps {
   tasks: Task[];
@@ -123,6 +123,7 @@ export const HabitMatrixSheet: React.FC<HabitMatrixSheetProps> = ({
         scheduledTime: editTime,
         recurring: editRecurring,
         notes: editNotes.trim(),
+        createdAt: editingTask.createdAt || selectedDate,
       });
     }
 
@@ -356,6 +357,7 @@ export const HabitMatrixSheet: React.FC<HabitMatrixSheetProps> = ({
       reminderEnabled: !!newScheduledTime,
       reminderTime: newScheduledTime || undefined,
       recurring: 'daily',
+      createdAt: selectedDate || new Date().toISOString().split('T')[0],
     });
     setNewTitle('');
     setNewScheduledTime('');
@@ -706,16 +708,6 @@ export const HabitMatrixSheet: React.FC<HabitMatrixSheetProps> = ({
                               <span className="truncate text-slate-900 font-semibold text-xs leading-tight" title={task.title}>
                                 {task.title}
                               </span>
-
-                              {(task.scheduledTime || task.reminderTime) && (
-                                <span 
-                                  className="inline-flex items-center gap-0.5 text-[9px] font-bold text-amber-700 bg-amber-50 border border-amber-200/80 px-1 py-0.2 rounded shrink-0"
-                                  title={`Notification scheduled for ${formatTime12Hour(task.scheduledTime || task.reminderTime || '')}`}
-                                >
-                                  <Bell className="w-2.5 h-2.5 text-amber-500 fill-amber-400" />
-                                  <span>{formatTime12Hour(task.scheduledTime || task.reminderTime || '')}</span>
-                                </span>
-                              )}
                             </div>
 
                             {/* Quick Actions: Edit & Delete */}
@@ -747,26 +739,40 @@ export const HabitMatrixSheet: React.FC<HabitMatrixSheetProps> = ({
 
                         {/* Checkboxes for each date */}
                         {daysList.map((day) => {
-                          const isChecked = !!(task.completedDates && task.completedDates[day.dateStr]);
+                          const todayStr = getTodayDateString();
+                          const taskCreatedDate = (task.createdAt || selectedDate).split('T')[0];
+                          const isBeforeCreated = day.dateStr < taskCreatedDate;
+                          const isFutureDate = day.dateStr > todayStr;
+                          const isDisabled = isBeforeCreated || isFutureDate;
+                          const isChecked = !isDisabled && !!(task.completedDates && task.completedDates[day.dateStr]);
 
                           return (
                             <td 
                               key={day.dateStr}
                               className={`p-1 text-center border-r border-slate-200 align-middle ${
-                                day.isToday ? 'bg-indigo-50/40' : ''
+                                isDisabled ? 'bg-slate-100/60' : day.isToday ? 'bg-indigo-50/40' : ''
                               }`}
                             >
                               <button
                                 type="button"
-                                onClick={() => onToggleTask(task.id, day.dateStr)}
-                                className={`w-6 h-6 sm:w-7 sm:h-7 rounded-md flex items-center justify-center font-bold font-mono transition-all duration-150 mx-auto text-xs cursor-pointer ${
-                                  isChecked
-                                    ? `${colorTheme.bg} text-white shadow-xs scale-105`
-                                    : 'border border-slate-300 hover:border-slate-400 bg-white text-transparent hover:text-slate-300'
+                                disabled={isDisabled}
+                                onClick={() => !isDisabled && onToggleTask(task.id, day.dateStr)}
+                                className={`w-6 h-6 sm:w-7 sm:h-7 rounded-md flex items-center justify-center font-bold font-mono transition-all duration-150 mx-auto text-xs ${
+                                  isDisabled
+                                    ? 'border border-dashed border-slate-200 bg-slate-100 text-slate-300 cursor-not-allowed opacity-50'
+                                    : isChecked
+                                    ? `${colorTheme.bg} text-white shadow-xs scale-105 cursor-pointer`
+                                    : 'border border-slate-300 hover:border-slate-400 bg-white text-transparent hover:text-slate-300 cursor-pointer'
                                 }`}
-                                title={`${task.title} on ${day.dateStr}: ${isChecked ? 'Completed ✓' : 'Mark Completed'}`}
+                                title={
+                                  isBeforeCreated
+                                    ? `Habit was created on ${taskCreatedDate}. Cannot mark completed prior to creation date (${day.dateStr}).`
+                                    : isFutureDate
+                                    ? `Cannot mark completed for future dates (${day.dateStr}).`
+                                    : `${task.title} on ${day.dateStr}: ${isChecked ? 'Completed ✓' : 'Mark Completed'}`
+                                }
                               >
-                                {isChecked ? '✓' : ''}
+                                {isDisabled ? '—' : isChecked ? '✓' : ''}
                               </button>
                             </td>
                           );
@@ -1024,6 +1030,29 @@ export const HabitMatrixSheet: React.FC<HabitMatrixSheetProps> = ({
                     <option value="weekdays">Weekdays Only</option>
                     <option value="weekends">Weekends Only</option>
                   </select>
+                </div>
+              </div>
+
+              {/* Created Date (Disabled / Read-only) */}
+              <div>
+                <label className="text-xs font-bold text-slate-700 block mb-1 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                    Created Date (Saved)
+                  </span>
+                  <span className="text-[10px] font-bold text-slate-400">Read-Only</span>
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    disabled
+                    readOnly
+                    value={editingTask.createdAt || selectedDate}
+                    className="w-full bg-slate-100/90 border border-slate-200 text-slate-500 font-mono text-xs font-bold rounded-xl p-2.5 cursor-not-allowed select-none"
+                  />
+                  <span className="absolute right-3 top-2.5 text-[10px] font-bold text-slate-400 bg-slate-200/80 px-1.5 py-0.5 rounded">
+                    🔒 Disabled
+                  </span>
                 </div>
               </div>
 

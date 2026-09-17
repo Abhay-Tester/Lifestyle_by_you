@@ -67,6 +67,25 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   console.warn('Firestore Error Info:', JSON.stringify(errInfo));
 }
 
+/**
+ * Helper to strip undefined values recursively so Firestore writeBatch/setDoc does not throw invalid data errors
+ */
+export function sanitizeForFirestore<T>(data: T): T {
+  if (data === null || data === undefined) return null as any;
+  if (typeof data !== 'object') return data;
+  if (data instanceof Date) return data.toISOString() as any;
+  if (Array.isArray(data)) {
+    return data.map((item) => sanitizeForFirestore(item)) as any;
+  }
+  const cleanObj: Record<string, any> = {};
+  for (const [key, value] of Object.entries(data)) {
+    if (value !== undefined) {
+      cleanObj[key] = sanitizeForFirestore(value);
+    }
+  }
+  return cleanObj as T;
+}
+
 export interface CloudUserData {
 
   tasks: Task[];
@@ -232,12 +251,12 @@ export async function saveAllUserDataToCloud(data: CloudUserData, explicitUserId
     // Update user profile document timestamp & profile details
     await setDoc(
       doc(db, 'users', userId),
-      {
+      sanitizeForFirestore({
         profile: data.profile,
         userId,
         lastSyncedAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
-      },
+      }),
       { merge: true }
     );
 
@@ -270,7 +289,7 @@ export async function saveAllUserDataToCloud(data: CloudUserData, explicitUserId
         const id = item.id || item.date;
         if (id) {
           const itemRef = doc(db, 'users', userId, collectionName, id);
-          batch.set(itemRef, { ...item, userId }, { merge: true });
+          batch.set(itemRef, sanitizeForFirestore({ ...item, userId }), { merge: true });
         }
       });
 

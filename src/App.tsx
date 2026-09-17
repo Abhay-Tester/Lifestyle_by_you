@@ -240,47 +240,47 @@ export default function App() {
   }, [isAuthenticated]);
 
   useEffect(() => { 
-    if (currentUserId) saveStoredData(STORAGE_KEYS.USER_PROFILE, userProfile, currentUserId); 
+    saveStoredData(STORAGE_KEYS.USER_PROFILE, userProfile, currentUserId); 
   }, [userProfile, currentUserId]);
 
   useEffect(() => { 
-    if (currentUserId) saveStoredData(STORAGE_KEYS.TASKS, tasks, currentUserId); 
+    saveStoredData(STORAGE_KEYS.TASKS, tasks, currentUserId); 
   }, [tasks, currentUserId]);
 
   useEffect(() => { 
-    if (currentUserId) saveStoredData(STORAGE_KEYS.DAILY_LOGS, dailyLogs, currentUserId); 
+    saveStoredData(STORAGE_KEYS.DAILY_LOGS, dailyLogs, currentUserId); 
   }, [dailyLogs, currentUserId]);
 
   useEffect(() => { 
-    if (currentUserId) saveStoredData(STORAGE_KEYS.STUDY_SESSIONS, studySessions, currentUserId); 
+    saveStoredData(STORAGE_KEYS.STUDY_SESSIONS, studySessions, currentUserId); 
   }, [studySessions, currentUserId]);
 
   useEffect(() => { 
-    if (currentUserId) saveStoredData(STORAGE_KEYS.EXERCISE_LOGS, exerciseLogs, currentUserId); 
+    saveStoredData(STORAGE_KEYS.EXERCISE_LOGS, exerciseLogs, currentUserId); 
   }, [exerciseLogs, currentUserId]);
 
   useEffect(() => { 
-    if (currentUserId) saveStoredData(STORAGE_KEYS.MEAL_LOGS, mealLogs, currentUserId); 
+    saveStoredData(STORAGE_KEYS.MEAL_LOGS, mealLogs, currentUserId); 
   }, [mealLogs, currentUserId]);
 
   useEffect(() => { 
-    if (currentUserId) saveStoredData(STORAGE_KEYS.GOALS, goals, currentUserId); 
+    saveStoredData(STORAGE_KEYS.GOALS, goals, currentUserId); 
   }, [goals, currentUserId]);
 
   useEffect(() => { 
-    if (currentUserId) saveStoredData(STORAGE_KEYS.PURCHASES, purchases, currentUserId); 
+    saveStoredData(STORAGE_KEYS.PURCHASES, purchases, currentUserId); 
   }, [purchases, currentUserId]);
 
   useEffect(() => { 
-    if (currentUserId) saveStoredData(STORAGE_KEYS.HABIT_CHALLENGES, habitChallenges, currentUserId); 
+    saveStoredData(STORAGE_KEYS.HABIT_CHALLENGES, habitChallenges, currentUserId); 
   }, [habitChallenges, currentUserId]);
 
   useEffect(() => { 
-    if (currentUserId) saveStoredData(STORAGE_KEYS.EMERGENCY_NOTES, emergencyNotes, currentUserId); 
+    saveStoredData(STORAGE_KEYS.EMERGENCY_NOTES, emergencyNotes, currentUserId); 
   }, [emergencyNotes, currentUserId]);
 
   useEffect(() => { 
-    if (currentUserId) saveStoredData(STORAGE_KEYS.NOTIFICATION_SETTINGS, notificationSettings, currentUserId); 
+    saveStoredData(STORAGE_KEYS.NOTIFICATION_SETTINGS, notificationSettings, currentUserId); 
   }, [notificationSettings, currentUserId]);
 
   // Background ticker for scheduled task alerts, wake up time, and sleep time notifications
@@ -405,6 +405,12 @@ export default function App() {
     setTasks((prev) =>
       prev.map((t) => {
         if (t.id === taskId) {
+          const realToday = getTodayDateString();
+          const taskCreatedDate = (t.createdAt || realToday).split('T')[0];
+          if (date < taskCreatedDate || date > realToday) {
+            // Cannot mark completed on dates prior to task creation OR future dates
+            return t;
+          }
           const isDone = !!t.completedDates[date];
           const newDates = { ...t.completedDates };
           if (isDone) {

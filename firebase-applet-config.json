@@ -3,7 +3,7 @@
   "appId": "1:358991743273:web:763ca46214fe0af421cf38",
   "apiKey": "AIzaSyAqV0zvxfomFsvhRPbssNtRd0pvY4FKwwE",
   "authDomain": "lifestylebyyou.firebaseapp.com",
-  "firestoreDatabaseId": "(default)",
+  "firestoreDatabaseId": "aistudio-dev",
   "storageBucket": "lifestylebyyou.firebasestorage.app",
   "messagingSenderId": "358991743273",
   "measurementId": "G-C5ETK8KJ4C",

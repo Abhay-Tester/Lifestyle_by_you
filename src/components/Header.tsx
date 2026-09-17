@@ -7,7 +7,12 @@ import {
   Sparkles,
   User,
   LogOut,
-  Bell
+  Bell,
+  Database,
+  CheckCircle2,
+  RefreshCw,
+  WifiOff,
+  Calendar
 } from 'lucide-react';
 import { getTodayDateString } from '../utils/date';
 import { exportAllUserData, importUserData } from '../utils/storage';
@@ -43,6 +48,7 @@ const MOTIVATION_QUOTES = [
 
 export const Header: React.FC<HeaderProps> = ({
   selectedDate = getTodayDateString(),
+  setSelectedDate,
   onOpenQuickAdd,
   onDataRefresh,
   userProfile,
@@ -50,8 +56,18 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenNotifications,
   onLogout,
   userId,
+  cloudSyncStatus = 'synced',
+  onManualCloudSync,
 }) => {
   const [showMenu, setShowMenu] = useState(false);
+
+  // Month & Date formatting for side-by-side display
+  const dateParts = selectedDate ? selectedDate.split('-').map(Number) : [];
+  const dateObj = dateParts.length === 3 ? new Date(dateParts[0], dateParts[1] - 1, dateParts[2]) : new Date();
+  const monthName = !isNaN(dateObj.getTime()) ? dateObj.toLocaleString('en-US', { month: 'long' }) : '';
+  const dayNum = !isNaN(dateObj.getTime()) ? dateObj.getDate() : '';
+  const yearNum = !isNaN(dateObj.getTime()) ? dateObj.getFullYear() : '';
+  const weekdayShort = !isNaN(dateObj.getTime()) ? dateObj.toLocaleString('en-US', { weekday: 'short' }) : '';
 
   // Dynamic daily motivation line
   const [motivationQuote, setMotivationQuote] = useState(() => {
@@ -100,8 +116,8 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Main Header Bar */}
         <div className="flex items-center justify-between py-2 sm:py-0 sm:h-16 gap-2 sm:gap-4">
           
-          {/* Brand Logo & Title */}
-          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
+          {/* Brand Logo & Title + Month & Date Display */}
+          <div className="flex items-center gap-2 sm:gap-4 shrink-0">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-gradient-to-tr from-indigo-500 to-emerald-400 flex items-center justify-center font-black text-white text-base sm:text-lg shadow-sm shrink-0">
                 ⚡
@@ -115,6 +131,29 @@ export const Header: React.FC<HeaderProps> = ({
                 </p>
               </div>
             </div>
+
+            {/* Header Display: Month side-by-side with Date */}
+            <div className="flex items-center gap-1.5 bg-slate-800/90 border border-slate-700/80 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-xl text-xs font-semibold shadow-xs">
+              <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-indigo-400 shrink-0" />
+              <div className="flex items-center gap-1.5">
+                <span className="text-amber-300 font-extrabold uppercase tracking-wider text-[11px] sm:text-xs">
+                  {monthName}
+                </span>
+                <span className="text-slate-500 font-bold">|</span>
+                <span className="text-white font-bold text-[11px] sm:text-xs">
+                  {weekdayShort}, {dayNum} {yearNum}
+                </span>
+              </div>
+              {setSelectedDate && (
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="bg-transparent text-slate-400 hover:text-white text-xs cursor-pointer focus:outline-none w-4 h-4 ml-0.5 opacity-80 hover:opacity-100 transition-opacity"
+                  title="Select Date & Month"
+                />
+              )}
+            </div>
           </div>
 
           {/* Center Motivation Banner */}
@@ -127,8 +166,40 @@ export const Header: React.FC<HeaderProps> = ({
             </div>
           </div>
 
-          {/* Action Buttons: Add Task, Profile & Settings */}
+          {/* Action Buttons: Add Task, Database Badge, Profile & Settings */}
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            
+            {/* Database Connection / Cloud Sync Status Button */}
+            <button
+              onClick={onManualCloudSync}
+              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-all cursor-pointer ${
+                cloudSyncStatus === 'syncing'
+                  ? 'bg-amber-950/60 text-amber-300 border-amber-700/60'
+                  : cloudSyncStatus === 'offline'
+                  ? 'bg-slate-800 text-slate-400 border-slate-700'
+                  : 'bg-emerald-950/50 text-emerald-300 border-emerald-800/60 hover:bg-emerald-900/60'
+              }`}
+              title="Click to check or sync Cloud Firestore database"
+            >
+              <Database className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+              {cloudSyncStatus === 'syncing' ? (
+                <>
+                  <RefreshCw className="w-3 h-3 text-amber-400 animate-spin" />
+                  <span className="hidden lg:inline text-[11px]">Syncing DB...</span>
+                </>
+              ) : cloudSyncStatus === 'offline' ? (
+                <>
+                  <WifiOff className="w-3 h-3 text-slate-400" />
+                  <span className="hidden lg:inline text-[11px]">Local Mode</span>
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                  <span className="hidden lg:inline text-[11px] font-semibold">DB Connected</span>
+                </>
+              )}
+            </button>
+
             {/* Quick Add Button */}
             <button
               onClick={onOpenQuickAdd}
@@ -176,6 +247,22 @@ export const Header: React.FC<HeaderProps> = ({
 
               {showMenu && (
                 <div className="absolute right-0 mt-2 w-56 bg-slate-800 border border-slate-700 rounded-2xl shadow-2xl py-2 z-50 text-slate-200 text-xs animate-in fade-in zoom-in-95 duration-150">
+                  <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    Cloud Database
+                  </div>
+                  <button
+                    onClick={() => {
+                      if (onManualCloudSync) onManualCloudSync();
+                      setShowMenu(false);
+                    }}
+                    className="w-full text-left px-3 py-2 hover:bg-slate-700 flex items-center gap-2 cursor-pointer"
+                  >
+                    <Database className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Sync Firestore DB Now</span>
+                  </button>
+
+                  <hr className="my-1.5 border-slate-700" />
+
                   <div className="px-3 py-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                     Account & Profile
                   </div>
@@ -242,3 +329,4 @@ export const Header: React.FC<HeaderProps> = ({
     </header>
   );
 };
+

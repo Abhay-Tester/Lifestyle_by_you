@@ -112,20 +112,46 @@ export const WakeSleepTracker: React.FC<WakeSleepTrackerProps> = ({
           <div className="space-y-2 pt-2">
             <h4 className="text-xs font-semibold text-slate-700 uppercase tracking-wider">Morning Activation Checklist</h4>
             {wakeTasks.map((task) => {
-              const isDone = !!task.completedDates[selectedDate];
+              const todayStr = getTodayDateString();
+              const taskCreatedDate = (task.createdAt || selectedDate).split('T')[0];
+              const isBeforeCreated = selectedDate < taskCreatedDate;
+              const isFuture = selectedDate > todayStr;
+              const isDisabled = isBeforeCreated || isFuture;
+              const isDone = !isDisabled && !!task.completedDates[selectedDate];
               return (
                 <div
                   key={task.id}
-                  onClick={() => onToggleTask(task.id, selectedDate)}
-                  className={`p-3 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
-                    isDone ? 'bg-amber-50/50 border-amber-200 text-slate-400 line-through' : 'bg-slate-50 border-slate-100 text-slate-900'
+                  onClick={() => !isDisabled && onToggleTask(task.id, selectedDate)}
+                  className={`p-3 rounded-xl border flex items-center justify-between transition-all ${
+                    isDisabled
+                      ? 'bg-slate-100/70 border-slate-200 text-slate-400 cursor-not-allowed opacity-60'
+                      : isDone
+                      ? 'bg-amber-50/50 border-amber-200 text-slate-400 line-through cursor-pointer'
+                      : 'bg-slate-50 border-slate-100 text-slate-900 cursor-pointer hover:border-slate-200'
                   }`}
+                  title={
+                    isBeforeCreated
+                      ? `Created on ${taskCreatedDate}. Cannot complete prior to creation date.`
+                      : isFuture
+                      ? `Cannot mark completed for future dates (${selectedDate}).`
+                      : undefined
+                  }
                 >
                   <div className="flex items-center gap-2.5">
-                    {isDone ? <CheckCircle2 className="w-4 h-4 text-amber-500" /> : <Circle className="w-4 h-4 text-slate-300" />}
+                    {isDisabled ? (
+                      <span className="text-slate-400 text-xs font-bold font-mono">🔒</span>
+                    ) : isDone ? (
+                      <CheckCircle2 className="w-4 h-4 text-amber-500" />
+                    ) : (
+                      <Circle className="w-4 h-4 text-slate-300" />
+                    )}
                     <span className="text-xs font-semibold">{task.title}</span>
                   </div>
-                  {task.scheduledTime && (
+                  {isBeforeCreated ? (
+                    <span className="text-[10px] text-slate-400 font-mono">Prior to Creation</span>
+                  ) : isFuture ? (
+                    <span className="text-[10px] text-slate-400 font-mono">Future Date</span>
+                  ) : task.scheduledTime && (
                     <span className="text-[10px] font-mono text-amber-700 bg-amber-50 px-2 py-0.5 rounded border border-amber-200 font-bold">
                       {task.scheduledTime}
                     </span>
@@ -201,20 +227,46 @@ export const WakeSleepTracker: React.FC<WakeSleepTrackerProps> = ({
           <div className="space-y-2 pt-1">
             <h4 className="text-xs font-semibold text-slate-700 uppercase tracking-wider">Night Wind-Down Routine</h4>
             {sleepTasks.map((task) => {
-              const isDone = !!task.completedDates[selectedDate];
+              const todayStr = getTodayDateString();
+              const taskCreatedDate = (task.createdAt || selectedDate).split('T')[0];
+              const isBeforeCreated = selectedDate < taskCreatedDate;
+              const isFuture = selectedDate > todayStr;
+              const isDisabled = isBeforeCreated || isFuture;
+              const isDone = !isDisabled && !!task.completedDates[selectedDate];
               return (
                 <div
                   key={task.id}
-                  onClick={() => onToggleTask(task.id, selectedDate)}
-                  className={`p-3 rounded-xl border flex items-center justify-between cursor-pointer transition-all ${
-                    isDone ? 'bg-indigo-50/50 border-indigo-200 text-slate-400 line-through' : 'bg-slate-50 border-slate-100 text-slate-900'
+                  onClick={() => !isDisabled && onToggleTask(task.id, selectedDate)}
+                  className={`p-3 rounded-xl border flex items-center justify-between transition-all ${
+                    isDisabled
+                      ? 'bg-slate-100/70 border-slate-200 text-slate-400 cursor-not-allowed opacity-60'
+                      : isDone
+                      ? 'bg-indigo-50/50 border-indigo-200 text-slate-400 line-through cursor-pointer'
+                      : 'bg-slate-50 border-slate-100 text-slate-900 cursor-pointer hover:border-slate-200'
                   }`}
+                  title={
+                    isBeforeCreated
+                      ? `Created on ${taskCreatedDate}. Cannot complete prior to creation date.`
+                      : isFuture
+                      ? `Cannot mark completed for future dates (${selectedDate}).`
+                      : undefined
+                  }
                 >
                   <div className="flex items-center gap-2.5">
-                    {isDone ? <CheckCircle2 className="w-4 h-4 text-indigo-600" /> : <Circle className="w-4 h-4 text-slate-300" />}
+                    {isDisabled ? (
+                      <span className="text-slate-400 text-xs font-bold font-mono">🔒</span>
+                    ) : isDone ? (
+                      <CheckCircle2 className="w-4 h-4 text-indigo-600" />
+                    ) : (
+                      <Circle className="w-4 h-4 text-slate-300" />
+                    )}
                     <span className="text-xs font-semibold">{task.title}</span>
                   </div>
-                  {task.scheduledTime && (
+                  {isBeforeCreated ? (
+                    <span className="text-[10px] text-slate-400 font-mono">Prior to Creation</span>
+                  ) : isFuture ? (
+                    <span className="text-[10px] text-slate-400 font-mono">Future Date</span>
+                  ) : task.scheduledTime && (
                     <span className="text-[10px] font-mono text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200 font-bold">
                       {task.scheduledTime}
                     </span>

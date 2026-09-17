@@ -6,8 +6,12 @@ import firebaseConfig from '../../firebase-applet-config.json';
 // Initialize Firebase App
 const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 
-// Initialize Firestore with long-polling to prevent proxy/iframe backend connection drops
-const dbId = firebaseConfig.firestoreDatabaseId || '(default)';
+// Database environment separation (AI Studio Dev/Preview vs Production)
+const envDbId = import.meta.env.VITE_FIREBASE_DATABASE_ID;
+const appEnv = import.meta.env.VITE_APP_ENV || (import.meta.env.PROD ? 'production' : 'aistudio-dev');
+
+// Default to 'aistudio-dev' for AI Studio, and '(default)' for live Production
+export const dbId = envDbId || (appEnv === 'production' ? '(default)' : (firebaseConfig.firestoreDatabaseId && firebaseConfig.firestoreDatabaseId !== '(default)' ? firebaseConfig.firestoreDatabaseId : 'aistudio-dev'));
 
 let firestoreInstance: Firestore;
 try {
