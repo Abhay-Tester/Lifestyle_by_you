@@ -141,84 +141,86 @@ export default function App() {
           }
         }
 
-        // Fetch this user's isolated data from Cloud Firestore
-        setCloudSyncStatus('syncing');
-        try {
-          const { data, hasData } = await fetchUserCloudData(user.uid);
-          if (hasData) {
-            // Cloud has data for this specific user - load it
-            const profile = data.profile || createDefaultUserProfile(user.displayName || user.email?.split('@')[0] || 'My Profile', user.email || '');
-            setUserProfile(profile);
-            setTasks(data.tasks || []);
-            setDailyLogs(data.dailyLogs || {});
-            setStudySessions(data.studySessions || []);
-            setExerciseLogs(data.exerciseLogs || []);
-            setMealLogs(data.mealLogs || []);
-            setGoals(data.goals || []);
-            setPurchases(data.purchases || []);
-            setHabitChallenges(data.habitChallenges || []);
-            setEmergencyNotes(data.emergencyNotes || []);
+        // Fetch this user's isolated data from Cloud Firestore if not already loaded for this user
+        if (!isInitialCloudLoadDone.current) {
+          setCloudSyncStatus('syncing');
+          try {
+            const { data, hasData } = await fetchUserCloudData(user.uid);
+            if (hasData) {
+              // Cloud has data for this specific user - load it
+              const profile = data.profile || createDefaultUserProfile(user.displayName || user.email?.split('@')[0] || 'My Profile', user.email || '');
+              setUserProfile(profile);
+              setTasks(data.tasks || []);
+              setDailyLogs(data.dailyLogs || {});
+              setStudySessions(data.studySessions || []);
+              setExerciseLogs(data.exerciseLogs || []);
+              setMealLogs(data.mealLogs || []);
+              setGoals(data.goals || []);
+              setPurchases(data.purchases || []);
+              setHabitChallenges(data.habitChallenges || []);
+              setEmergencyNotes(data.emergencyNotes || []);
 
-            // Also mirror to user-scoped local storage
-            saveStoredData(STORAGE_KEYS.USER_PROFILE, profile, user.uid);
-            saveStoredData(STORAGE_KEYS.TASKS, data.tasks || [], user.uid);
-            saveStoredData(STORAGE_KEYS.DAILY_LOGS, data.dailyLogs || {}, user.uid);
-            saveStoredData(STORAGE_KEYS.STUDY_SESSIONS, data.studySessions || [], user.uid);
-            saveStoredData(STORAGE_KEYS.EXERCISE_LOGS, data.exerciseLogs || [], user.uid);
-            saveStoredData(STORAGE_KEYS.MEAL_LOGS, data.mealLogs || [], user.uid);
-            saveStoredData(STORAGE_KEYS.GOALS, data.goals || [], user.uid);
-            saveStoredData(STORAGE_KEYS.PURCHASES, data.purchases || [], user.uid);
-            saveStoredData(STORAGE_KEYS.HABIT_CHALLENGES, data.habitChallenges || [], user.uid);
-            saveStoredData(STORAGE_KEYS.EMERGENCY_NOTES, data.emergencyNotes || [], user.uid);
-          } else {
-            // New user without cloud records yet: load their user-scoped local storage or fresh templates
-            const userCachedProfile = loadStoredData<UserProfile | null>(STORAGE_KEYS.USER_PROFILE, null, user.uid);
-            const initialProfile = userCachedProfile || createDefaultUserProfile(
-              user.displayName || (user.email ? user.email.split('@')[0] : 'My Profile'),
-              user.email || ''
-            );
-            const initialTasks = loadStoredData(STORAGE_KEYS.TASKS, defaultTasks, user.uid);
-            const initialDailyLogs = loadStoredData(STORAGE_KEYS.DAILY_LOGS, defaultDailyLogs, user.uid);
-            const initialStudy = loadStoredData(STORAGE_KEYS.STUDY_SESSIONS, defaultStudySessions, user.uid);
-            const initialExercise = loadStoredData(STORAGE_KEYS.EXERCISE_LOGS, defaultExerciseLogs, user.uid);
-            const initialMeal = loadStoredData(STORAGE_KEYS.MEAL_LOGS, defaultMealLogs, user.uid);
-            const initialGoals = loadStoredData(STORAGE_KEYS.GOALS, defaultGoals, user.uid);
-            const initialPurchases = loadStoredData(STORAGE_KEYS.PURCHASES, defaultPurchases, user.uid);
-            const initialChallenges = loadStoredData(STORAGE_KEYS.HABIT_CHALLENGES, defaultHabitChallenges, user.uid);
-            const initialNotes = loadStoredData(STORAGE_KEYS.EMERGENCY_NOTES, defaultEmergencyNotes, user.uid);
+              // Also mirror to user-scoped local storage
+              saveStoredData(STORAGE_KEYS.USER_PROFILE, profile, user.uid);
+              saveStoredData(STORAGE_KEYS.TASKS, data.tasks || [], user.uid);
+              saveStoredData(STORAGE_KEYS.DAILY_LOGS, data.dailyLogs || {}, user.uid);
+              saveStoredData(STORAGE_KEYS.STUDY_SESSIONS, data.studySessions || [], user.uid);
+              saveStoredData(STORAGE_KEYS.EXERCISE_LOGS, data.exerciseLogs || [], user.uid);
+              saveStoredData(STORAGE_KEYS.MEAL_LOGS, data.mealLogs || [], user.uid);
+              saveStoredData(STORAGE_KEYS.GOALS, data.goals || [], user.uid);
+              saveStoredData(STORAGE_KEYS.PURCHASES, data.purchases || [], user.uid);
+              saveStoredData(STORAGE_KEYS.HABIT_CHALLENGES, data.habitChallenges || [], user.uid);
+              saveStoredData(STORAGE_KEYS.EMERGENCY_NOTES, data.emergencyNotes || [], user.uid);
+            } else {
+              // New user without cloud records yet: load their user-scoped local storage or fresh templates
+              const userCachedProfile = loadStoredData<UserProfile | null>(STORAGE_KEYS.USER_PROFILE, null, user.uid);
+              const initialProfile = userCachedProfile || createDefaultUserProfile(
+                user.displayName || (user.email ? user.email.split('@')[0] : 'My Profile'),
+                user.email || ''
+              );
+              const initialTasks = loadStoredData(STORAGE_KEYS.TASKS, defaultTasks, user.uid);
+              const initialDailyLogs = loadStoredData(STORAGE_KEYS.DAILY_LOGS, defaultDailyLogs, user.uid);
+              const initialStudy = loadStoredData(STORAGE_KEYS.STUDY_SESSIONS, defaultStudySessions, user.uid);
+              const initialExercise = loadStoredData(STORAGE_KEYS.EXERCISE_LOGS, defaultExerciseLogs, user.uid);
+              const initialMeal = loadStoredData(STORAGE_KEYS.MEAL_LOGS, defaultMealLogs, user.uid);
+              const initialGoals = loadStoredData(STORAGE_KEYS.GOALS, defaultGoals, user.uid);
+              const initialPurchases = loadStoredData(STORAGE_KEYS.PURCHASES, defaultPurchases, user.uid);
+              const initialChallenges = loadStoredData(STORAGE_KEYS.HABIT_CHALLENGES, defaultHabitChallenges, user.uid);
+              const initialNotes = loadStoredData(STORAGE_KEYS.EMERGENCY_NOTES, defaultEmergencyNotes, user.uid);
 
-            setUserProfile(initialProfile);
-            setTasks(initialTasks);
-            setDailyLogs(initialDailyLogs);
-            setStudySessions(initialStudy);
-            setExerciseLogs(initialExercise);
-            setMealLogs(initialMeal);
-            setGoals(initialGoals);
-            setPurchases(initialPurchases);
-            setHabitChallenges(initialChallenges);
-            setEmergencyNotes(initialNotes);
+              setUserProfile(initialProfile);
+              setTasks(initialTasks);
+              setDailyLogs(initialDailyLogs);
+              setStudySessions(initialStudy);
+              setExerciseLogs(initialExercise);
+              setMealLogs(initialMeal);
+              setGoals(initialGoals);
+              setPurchases(initialPurchases);
+              setHabitChallenges(initialChallenges);
+              setEmergencyNotes(initialNotes);
 
-            // Seed user's private Firestore document
-            await saveAllUserDataToCloud({
-              tasks: initialTasks,
-              dailyLogs: initialDailyLogs,
-              studySessions: initialStudy,
-              exerciseLogs: initialExercise,
-              mealLogs: initialMeal,
-              goals: initialGoals,
-              purchases: initialPurchases,
-              habitChallenges: initialChallenges,
-              emergencyNotes: initialNotes,
-              profile: initialProfile,
-            }, user.uid);
+              // Seed user's private Firestore document
+              await saveAllUserDataToCloud({
+                tasks: initialTasks,
+                dailyLogs: initialDailyLogs,
+                studySessions: initialStudy,
+                exerciseLogs: initialExercise,
+                mealLogs: initialMeal,
+                goals: initialGoals,
+                purchases: initialPurchases,
+                habitChallenges: initialChallenges,
+                emergencyNotes: initialNotes,
+                profile: initialProfile,
+              }, user.uid);
+            }
+            setCloudSyncStatus('synced');
+          } catch (err) {
+            console.warn('Firebase user sync status: using local cache', err);
+            setCloudSyncStatus('offline');
+          } finally {
+            isInitialCloudLoadDone.current = true;
+            setIsInitialLoading(false);
           }
-          setCloudSyncStatus('synced');
-        } catch (err) {
-          console.warn('Firebase user sync status: using local cache', err);
-          setCloudSyncStatus('offline');
-        } finally {
-          isInitialCloudLoadDone.current = true;
-          setIsInitialLoading(false);
         }
       } else {
         // Logged out
@@ -517,6 +519,11 @@ export default function App() {
     );
   };
 
+  const handleDeleteStudySession = (id: string) => {
+    setStudySessions((prev) => prev.filter((s) => s.id !== id));
+    if (currentUserId) deleteCloudItem('studySessions', id, currentUserId);
+  };
+
   // Exercise Handlers
   const handleAddExerciseLog = (exerciseData: Omit<ExerciseLog, 'id'>) => {
     const newExercise: ExerciseLog = {
@@ -532,6 +539,11 @@ export default function App() {
     );
   };
 
+  const handleDeleteExerciseLog = (id: string) => {
+    setExerciseLogs((prev) => prev.filter((e) => e.id !== id));
+    if (currentUserId) deleteCloudItem('exerciseLogs', id, currentUserId);
+  };
+
   // Meal Handler
   const handleAddMealLog = (mealData: Omit<MealLog, 'id'>) => {
     const newMeal: MealLog = {
@@ -539,6 +551,11 @@ export default function App() {
       id: `m-${Date.now()}`,
     };
     setMealLogs((prev) => [newMeal, ...prev]);
+  };
+
+  const handleDeleteMealLog = (id: string) => {
+    setMealLogs((prev) => prev.filter((m) => m.id !== id));
+    if (currentUserId) deleteCloudItem('mealLogs', id, currentUserId);
   };
 
   // Goal Handlers
@@ -695,6 +712,11 @@ export default function App() {
     );
   };
 
+  const handleDeleteChallenge = (challengeId: string) => {
+    setHabitChallenges((prev) => prev.filter((c) => c.id !== challengeId));
+    if (currentUserId) deleteCloudItem('habitChallenges', challengeId, currentUserId);
+  };
+
   const handleDataRefresh = () => {
     setTasks(loadStoredData(STORAGE_KEYS.TASKS, defaultTasks, currentUserId));
     setDailyLogs(loadStoredData(STORAGE_KEYS.DAILY_LOGS, defaultDailyLogs, currentUserId));
@@ -804,6 +826,7 @@ export default function App() {
               onAdvanceStage={handleAdvanceChallengeStage}
               onAddChallenge={handleAddChallenge}
               onResetProgress={handleResetChallengeProgress}
+              onDeleteChallenge={handleDeleteChallenge}
             />
           )}
 
@@ -823,8 +846,10 @@ export default function App() {
               exerciseLogs={exerciseLogs}
               onAddStudySession={handleAddStudySession}
               onToggleStudySession={handleToggleStudySession}
+              onDeleteStudySession={handleDeleteStudySession}
               onAddExerciseLog={handleAddExerciseLog}
               onToggleExerciseLog={handleToggleExerciseLog}
+              onDeleteExerciseLog={handleDeleteExerciseLog}
             />
           )}
 
@@ -835,6 +860,7 @@ export default function App() {
               mealLogs={mealLogs}
               onUpdateLog={handleUpdateDailyLog}
               onAddMeal={handleAddMealLog}
+              onDeleteMealLog={handleDeleteMealLog}
               onAddWater={handleAddWater}
             />
           )}

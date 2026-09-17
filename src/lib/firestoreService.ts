@@ -172,7 +172,9 @@ export async function fetchUserCloudData(explicitUserId?: string): Promise<{ dat
     const emergencyNotes: EmergencyNote[] = [];
     notesSnap.forEach((d) => emergencyNotes.push({ ...(d.data() as EmergencyNote), id: d.id }));
 
+    // hasData is true if user profile document exists in Firestore or if any subcollections contain records
     const hasData = 
+      userDocSnap.exists() ||
       !!profile ||
       tasks.length > 0 ||
       Object.keys(dailyLogs).length > 0 ||
@@ -239,96 +241,53 @@ export async function saveAllUserDataToCloud(data: CloudUserData, explicitUserId
       { merge: true }
     );
 
-    // Sync Tasks
-    if (data.tasks.length > 0) {
-      const taskBatch = writeBatch(db);
-      for (const t of data.tasks) {
-        const taskRef = doc(db, 'users', userId, 'tasks', t.id);
-        taskBatch.set(taskRef, { ...t, userId });
-      }
-      await taskBatch.commit();
-    }
+    // Sync subcollection helper function to ensure deleted items are purged from Firestore
+    const syncSubcollection = async (
+      collectionName: string,
+      itemsMapOrArray: any[] | Record<string, any>
+    ) => {
+      const items = Array.isArray(itemsMapOrArray)
+        ? itemsMapOrArray
+        : Object.values(itemsMapOrArray);
 
-    // Sync Daily Logs
-    const logEntries = Object.entries(data.dailyLogs);
-    if (logEntries.length > 0) {
-      const logsBatch = writeBatch(db);
-      for (const [dateKey, log] of logEntries) {
-        const logRef = doc(db, 'users', userId, 'dailyLogs', dateKey);
-        logsBatch.set(logRef, { ...log, userId, date: dateKey });
-      }
-      await logsBatch.commit();
-    }
+      const colRef = collection(db, 'users', userId, collectionName);
+      const existingSnap = await getDocs(colRef);
+      const batch = writeBatch(db);
 
-    // Sync Study Sessions
-    if (data.studySessions.length > 0) {
-      const studyBatch = writeBatch(db);
-      for (const s of data.studySessions) {
-        const sRef = doc(db, 'users', userId, 'studySessions', s.id);
-        studyBatch.set(sRef, { ...s, userId });
-      }
-      await studyBatch.commit();
-    }
+      const currentIds = new Set(
+        items.map((item) => item.id || item.date)
+      );
 
-    // Sync Exercise Logs
-    if (data.exerciseLogs.length > 0) {
-      const exBatch = writeBatch(db);
-      for (const e of data.exerciseLogs) {
-        const eRef = doc(db, 'users', userId, 'exerciseLogs', e.id);
-        exBatch.set(eRef, { ...e, userId });
-      }
-      await exBatch.commit();
-    }
+      // Delete removed items from Firestore
+      existingSnap.forEach((d) => {
+        if (!currentIds.has(d.id)) {
+          batch.delete(d.ref);
+        }
+      });
 
-    // Sync Meal Logs
-    if (data.mealLogs.length > 0) {
-      const mBatch = writeBatch(db);
-      for (const m of data.mealLogs) {
-        const mRef = doc(db, 'users', userId, 'mealLogs', m.id);
-        mBatch.set(mRef, { ...m, userId });
-      }
-      await mBatch.commit();
-    }
+      // Save/Update current items
+      items.forEach((item) => {
+        const id = item.id || item.date;
+        if (id) {
+          const itemRef = doc(db, 'users', userId, collectionName, id);
+          batch.set(itemRef, { ...item, userId }, { merge: true });
+        }
+      });
 
-    // Sync Goals
-    if (data.goals.length > 0) {
-      const gBatch = writeBatch(db);
-      for (const g of data.goals) {
-        const gRef = doc(db, 'users', userId, 'goals', g.id);
-        gBatch.set(gRef, { ...g, userId });
-      }
-      await gBatch.commit();
-    }
+      await batch.commit();
+    };
 
-    // Sync Purchases
-    if (data.purchases.length > 0) {
-      const pBatch = writeBatch(db);
-      for (const p of data.purchases) {
-        const pRef = doc(db, 'users', userId, 'purchases', p.id);
-        pBatch.set(pRef, { ...p, userId });
-      }
-      await pBatch.commit();
-    }
-
-    // Sync Habit Challenges
-    if (data.habitChallenges.length > 0) {
-      const hcBatch = writeBatch(db);
-      for (const hc of data.habitChallenges) {
-        const hcRef = doc(db, 'users', userId, 'habitChallenges', hc.id);
-        hcBatch.set(hcRef, { ...hc, userId });
-      }
-      await hcBatch.commit();
-    }
-
-    // Sync Emergency Notes
-    if (data.emergencyNotes && data.emergencyNotes.length > 0) {
-      const notesBatch = writeBatch(db);
-      for (const note of data.emergencyNotes) {
-        const noteRef = doc(db, 'users', userId, 'emergencyNotes', note.id);
-        notesBatch.set(noteRef, { ...note, userId });
-      }
-      await notesBatch.commit();
-    }
+    await Promise.all([
+      syncSubcollection('tasks', data.tasks),
+      syncSubcollection('dailyLogs', data.dailyLogs),
+      syncSubcollection('studySessions', data.studySessions),
+      syncSubcollection('exerciseLogs', data.exerciseLogs),
+      syncSubcollection('mealLogs', data.mealLogs),
+      syncSubcollection('goals', data.goals),
+      syncSubcollection('purchases', data.purchases),
+      syncSubcollection('habitChallenges', data.habitChallenges),
+      syncSubcollection('emergencyNotes', data.emergencyNotes || []),
+    ]);
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, `users/${userId}`);
   }

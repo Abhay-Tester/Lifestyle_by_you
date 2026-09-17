@@ -11,7 +11,8 @@ import {
   Flame, 
   Info,
   ShieldCheck,
-  Leaf
+  Leaf,
+  Trash2
 } from 'lucide-react';
 
 interface FoodHealthTrackerProps {
@@ -20,6 +21,7 @@ interface FoodHealthTrackerProps {
   dailyLog: DailyLog;
   onAddMealLog: (meal: Omit<MealLog, 'id'>) => void;
   onUpdateDailyLog: (date: string, partial: Partial<DailyLog>) => void;
+  onDeleteMealLog?: (id: string) => void;
 }
 
 export const FoodHealthTracker: React.FC<FoodHealthTrackerProps> = ({
@@ -28,6 +30,7 @@ export const FoodHealthTracker: React.FC<FoodHealthTrackerProps> = ({
   dailyLog,
   onAddMealLog,
   onUpdateDailyLog,
+  onDeleteMealLog,
 }) => {
   const [mealType, setMealType] = useState<'breakfast' | 'lunch' | 'dinner' | 'snack'>('breakfast');
   const [mealTime, setMealTime] = useState('12:30');
@@ -215,6 +218,16 @@ export const FoodHealthTracker: React.FC<FoodHealthTrackerProps> = ({
                         }`}>
                           {meal.digestionImpact} digestion
                         </span>
+                        {onDeleteMealLog && (
+                          <button
+                            type="button"
+                            onClick={() => onDeleteMealLog(meal.id)}
+                            className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors ml-1"
+                            title="Delete meal log"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
                       </div>
                     </div>
 

@@ -18,7 +18,8 @@ import {
   Moon,
   Dumbbell,
   HeartPulse,
-  RotateCcw
+  RotateCcw,
+  Trash2
 } from 'lucide-react';
 
 interface HabitLadderDashboardProps {
@@ -28,6 +29,7 @@ interface HabitLadderDashboardProps {
   onAdvanceChallengeStage: (challengeId: string) => void;
   onAddChallenge: (challenge: Omit<HabitChallenge, 'id'>) => void;
   onResetChallengeProgress: (challengeId: string) => void;
+  onDeleteChallenge?: (challengeId: string) => void;
 }
 
 export const HabitLadderDashboard: React.FC<HabitLadderDashboardProps> = ({
@@ -37,6 +39,7 @@ export const HabitLadderDashboard: React.FC<HabitLadderDashboardProps> = ({
   onAdvanceChallengeStage,
   onAddChallenge,
   onResetChallengeProgress,
+  onDeleteChallenge,
 }) => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [newTitle, setNewTitle] = useState('');
@@ -222,13 +225,24 @@ export const HabitLadderDashboard: React.FC<HabitLadderDashboardProps> = ({
                       </div>
                     </div>
 
-                    <button
-                      onClick={() => onResetChallengeProgress(challenge.id)}
-                      className="text-slate-400 hover:text-rose-500 text-xs p-1"
-                      title="Reset challenge progress"
-                    >
-                      <RotateCcw className="w-4 h-4" />
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => onResetChallengeProgress(challenge.id)}
+                        className="text-slate-400 hover:text-indigo-600 text-xs p-1 rounded hover:bg-slate-100 transition-colors"
+                        title="Reset challenge progress"
+                      >
+                        <RotateCcw className="w-4 h-4" />
+                      </button>
+                      {onDeleteChallenge && (
+                        <button
+                          onClick={() => onDeleteChallenge(challenge.id)}
+                          className="text-slate-400 hover:text-rose-600 text-xs p-1 rounded hover:bg-rose-50 transition-colors"
+                          title="Delete challenge"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
                   </div>
 
                   {/* Progress Bar & Days Indicator */}

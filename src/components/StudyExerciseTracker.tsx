@@ -15,7 +15,8 @@ import {
   Award, 
   Sparkles,
   Layers,
-  Activity
+  Activity,
+  Trash2
 } from 'lucide-react';
 
 interface StudyExerciseTrackerProps {
@@ -26,6 +27,8 @@ interface StudyExerciseTrackerProps {
   onAddExerciseLog: (exercise: Omit<ExerciseLog, 'id'>) => void;
   onToggleStudySession: (id: string) => void;
   onToggleExerciseLog: (id: string) => void;
+  onDeleteStudySession?: (id: string) => void;
+  onDeleteExerciseLog?: (id: string) => void;
 }
 
 export const StudyExerciseTracker: React.FC<StudyExerciseTrackerProps> = ({
@@ -36,6 +39,8 @@ export const StudyExerciseTracker: React.FC<StudyExerciseTrackerProps> = ({
   onAddExerciseLog,
   onToggleStudySession,
   onToggleExerciseLog,
+  onDeleteStudySession,
+  onDeleteExerciseLog,
 }) => {
   // Pomodoro Timer State
   const [timerSubject, setTimerSubject] = useState('Deep Work Study');
@@ -359,9 +364,24 @@ export const StudyExerciseTracker: React.FC<StudyExerciseTrackerProps> = ({
                     </div>
                   </div>
 
-                  <span className="font-mono text-xs font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-200">
-                    {s.durationMinutes} mins
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-xs font-bold text-indigo-700 bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-200">
+                      {s.durationMinutes} mins
+                    </span>
+                    {onDeleteStudySession && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDeleteStudySession(s.id);
+                        }}
+                        className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                        title="Delete session"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))
             )}
@@ -467,9 +487,24 @@ export const StudyExerciseTracker: React.FC<StudyExerciseTrackerProps> = ({
                     </div>
                   </div>
 
-                  <span className="font-mono text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
-                    {e.durationMinutes} mins
-                  </span>
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
+                      {e.durationMinutes} mins
+                    </span>
+                    {onDeleteExerciseLog && (
+                      <button
+                        type="button"
+                        onClick={(ev) => {
+                          ev.stopPropagation();
+                          onDeleteExerciseLog(e.id);
+                        }}
+                        className="p-1 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
+                        title="Delete workout"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    )}
+                  </div>
                 </div>
               ))
             )}

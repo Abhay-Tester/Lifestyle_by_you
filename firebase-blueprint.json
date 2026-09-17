@@ -153,6 +153,26 @@
         "brainComfortTip": { "type": "string" }
       },
       "required": ["userId", "title", "targetDays"]
+    },
+    "EmergencyNote": {
+      "title": "EmergencyNote",
+      "description": "Quick notes, client requests, emergency todos and thoughts",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "date": { "type": "string" },
+        "time": { "type": "string" },
+        "clientName": { "type": "string" },
+        "phoneNumber": { "type": "string" },
+        "category": { "type": "string" },
+        "priority": { "type": "string" },
+        "isCompleted": { "type": "boolean" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["title", "content", "createdAt"]
     }
   },
   "firestore": {
@@ -191,6 +211,10 @@
     "/users/{userId}/habitChallenges/{challengeId}": {
       "schema": "HabitChallenge",
       "description": "Habit ladder challenges"
+    },
+    "/users/{userId}/emergencyNotes/{noteId}": {
+      "schema": "EmergencyNote",
+      "description": "Emergency notes and quick thoughts"
     }
   }
 }
